@@ -384,7 +384,7 @@
         .select();
 
       if (error) {
-        alert("서버 저장 실패");
+        alert("서버 저장 실패: " + error.message");
         console.error(error);
         return;
       }
@@ -648,4 +648,5 @@
   </script>
 </body>
 </html>
+
 
