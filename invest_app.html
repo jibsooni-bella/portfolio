@@ -1,352 +1,645 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-
-<meta charset="UTF-8">
-<title>ETF Investment App</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-body{
-font-family:Arial;
-background:#f4f6fa;
-padding:40px;
-}
-
-.container{
-max-width:1200px;
-margin:auto;
-}
-
-input,select{
-padding:7px;
-margin:5px;
-}
-
-button{
-padding:7px 12px;
-cursor:pointer;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-background:white;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:7px;
-text-align:center;
-}
-
-th{
-background:#eee;
-}
-
-.profit{color:green;}
-.loss{color:red;}
-
-</style>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ETF 투자 관리</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 {
+      margin: 0 0 20px;
+      font-size: 36px;
+      font-weight: 800;
+    }
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 24px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #555;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d7dce5;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      border: none;
+      background: #2f6fed;
+      color: #fff;
+    }
+    button.secondary {
+      background: #eef3ff;
+      color: #2f6fed;
+      border: 1px solid #cfdcff;
+    }
+    button.danger {
+      background: #fce8e8;
+      color: #b42318;
+      border: 1px solid #f4c7c7;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .btn-row button {
+      width: auto;
+      min-width: 120px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .summary .item {
+      background: #f8faff;
+      border: 1px solid #e3ebff;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .summary .title {
+      font-size: 13px;
+      color: #667085;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .summary .value {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+    th, td {
+      border-bottom: 1px solid #eceff5;
+      padding: 10px 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background: #f8fafc;
+      font-size: 14px;
+    }
+    td input, td select {
+      min-width: 90px;
+      padding: 8px 10px;
+    }
+    .profit { color: #067647; font-weight: 700; }
+    .loss { color: #b42318; font-weight: 700; }
+    .muted { color: #667085; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+    .notice {
+      font-size: 13px;
+      color: #667085;
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+    .rebalance-box {
+      line-height: 1.8;
+      font-size: 15px;
+    }
+    .footer-note {
+      margin-top: 12px;
+      color: #667085;
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .grid, .grid-4, .grid-5, .summary, .two-col {
+        grid-template-columns: 1fr;
+      }
+      h1 { font-size: 28px; }
+    }
+  </style>
 </head>
-
 <body>
-
-<div class="container">
-
-<h1>📊 ETF 투자 관리</h1>
-
-<h3>ETF 추가</h3>
-
-<input id="name" placeholder="종목명">
-<input id="ticker" placeholder="티커 (360750.KS)">
-<input id="qty" placeholder="수량">
-<input id="buy" placeholder="총 매입금">
-
-<button onclick="addStock()">추가</button>
-<button onclick="updatePrices()">가격 업데이트</button>
-
-<table id="table">
-
-<thead>
-<tr>
-<th>자산군</th>
-<th>종목</th>
-<th>현재가</th>
-<th>수량</th>
-<th>평균단가</th>
-<th>평가금</th>
-<th>수익률</th>
-<th>삭제</th>
-</tr>
-</thead>
-
-<tbody></tbody>
-
-</table>
-
-<h3>자산 비중</h3>
-<canvas id="pie"></canvas>
-
-<h3>목표 자산배분 (%)</h3>
-
-주식 <input id="tStock">
-채권 <input id="tBond">
-금 <input id="tGold">
-달러 <input id="tDollar">
-리츠 <input id="tREIT">
-
-<button onclick="rebalance()">리밸런싱 계산</button>
-
-<div id="rebalanceResult"></div>
-
-<h3>월 투자 기록</h3>
-
-<input id="month" placeholder="2026-03">
-<input id="invest" placeholder="투자금">
-
-<button onclick="addInvest()">기록</button>
-
-<canvas id="growth"></canvas>
-
-</div>
-
-<script>
-
-let portfolio=JSON.parse(localStorage.getItem("portfolio"))||[];
-let investHistory=JSON.parse(localStorage.getItem("investHistory"))||[];
-
-function save(){
-localStorage.setItem("portfolio",JSON.stringify(portfolio));
-localStorage.setItem("investHistory",JSON.stringify(investHistory));
-}
-
-function classify(name){
-
-name=name.toLowerCase();
-
-if(name.includes("채권")||name.includes("국채")) return "채권";
-if(name.includes("금")) return "금";
-if(name.includes("달러")) return "달러";
-if(name.includes("리츠")) return "리츠";
-
-return "주식";
-
-}
-
-async function getPrice(ticker){
-
-try{
-
-let url=`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`;
-
-let res=await fetch(url);
-let data=await res.json();
-
-return data.quoteResponse.result[0].regularMarketPrice;
-
-}catch{
-
-return 0;
-
-}
-
-}
-
-async function addStock(){
-
-let name=document.getElementById("name").value;
-let ticker=document.getElementById("ticker").value;
-let qty=parseFloat(document.getElementById("qty").value);
-let buy=parseFloat(document.getElementById("buy").value);
-
-let price=await getPrice(ticker);
-
-portfolio.push({
-name,
-ticker,
-qty,
-buy,
-price,
-type:classify(name)
-});
-
-save();
-render();
-
-}
-
-function removeStock(i){
-
-portfolio.splice(i,1);
-save();
-render();
-
-}
-
-async function updatePrices(){
-
-for(let s of portfolio){
-
-s.price=await getPrice(s.ticker);
-
-}
-
-save();
-render();
-
-}
-
-function render(){
-
-let tbody=document.querySelector("#table tbody");
-tbody.innerHTML="";
-
-portfolio.forEach((s,i)=>{
-
-let avg=s.buy/s.qty;
-let value=s.qty*s.price;
-let profit=((s.price-avg)/avg)*100;
-
-let row=document.createElement("tr");
-
-row.innerHTML=`
-
-<td>${s.type}</td>
-<td>${s.name}</td>
-<td>${s.price.toFixed(2)}</td>
-<td>${s.qty}</td>
-<td>${avg.toFixed(0)}</td>
-<td>${value.toFixed(0)}</td>
-<td class="${profit>=0?'profit':'loss'}">${profit.toFixed(2)}%</td>
-<td><button onclick="removeStock(${i})">삭제</button></td>
-
-`;
-
-tbody.appendChild(row);
-
-});
-
-drawPie();
-drawGrowth();
-
-}
-
-let pie;
-
-function drawPie(){
-
-let map={};
-
-portfolio.forEach(s=>{
-
-let value=s.qty*s.price;
-
-if(!map[s.type]) map[s.type]=0;
-
-map[s.type]+=value;
-
-});
-
-let labels=Object.keys(map);
-let values=Object.values(map);
-
-let ctx=document.getElementById("pie");
-
-if(pie) pie.destroy();
-
-pie=new Chart(ctx,{
-type:"pie",
-data:{
-labels:labels,
-datasets:[{data:values}]
-}
-});
-
-}
-
-function rebalance(){
-
-let totals={};
-let total=0;
-
-portfolio.forEach(s=>{
-
-let value=s.qty*s.price;
-
-if(!totals[s.type]) totals[s.type]=0;
-
-totals[s.type]+=value;
-
-total+=value;
-
-});
-
-let result="<h3>리밸런싱</h3>";
-
-for(let type in totals){
-
-let weight=(totals[type]/total)*100;
-
-result+=`${type} 현재 ${weight.toFixed(1)}%<br>`;
-
-}
-
-document.getElementById("rebalanceResult").innerHTML=result;
-
-}
-
-function addInvest(){
-
-let month=document.getElementById("month").value;
-let amount=parseFloat(document.getElementById("invest").value);
-
-investHistory.push({month,amount});
-
-save();
-drawGrowth();
-
-}
-
-let growth;
-
-function drawGrowth(){
-
-let labels=[];
-let data=[];
-
-investHistory.forEach(i=>{
-
-labels.push(i.month);
-data.push(i.amount);
-
-});
-
-let ctx=document.getElementById("growth");
-
-if(growth) growth.destroy();
-
-growth=new Chart(ctx,{
-type:"line",
-data:{
-labels:labels,
-datasets:[{
-label:"월 투자금",
-data:data
-}]
-}
-});
-
-}
-
-updatePrices();
-render();
-
-</script>
-
+  <div class="wrap">
+    <h1>📊 ETF 투자 관리</h1>
+
+    <div class="card">
+      <h2>종목 추가</h2>
+      <div class="grid">
+        <div>
+          <label for="account">계좌</label>
+          <select id="account">
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+          </select>
+        </div>
+        <div>
+          <label for="name">종목명</label>
+          <input id="name" placeholder="예: TIGER 미국S&P500" />
+        </div>
+        <div>
+          <label for="ticker">티커</label>
+          <input id="ticker" placeholder="예: 360750.KS" />
+        </div>
+        <div>
+          <label for="qty">수량</label>
+          <input id="qty" type="number" step="any" placeholder="예: 10" />
+        </div>
+        <div>
+          <label for="buy">총 매입금</label>
+          <input id="buy" type="number" step="any" placeholder="예: 350000" />
+        </div>
+        <div>
+          <label for="price">현재가</label>
+          <input id="price" type="number" step="any" placeholder="예: 24815" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button onclick="addHolding()">추가</button>
+        <button class="secondary" onclick="backupData()">백업(JSON)</button>
+        <button class="secondary" onclick="document.getElementById('restoreFile').click()">복원(JSON)</button>
+        <button class="danger" onclick="clearAllData()">전체 삭제</button>
+      </div>
+      <input id="restoreFile" type="file" accept=".json,application/json" style="display:none" onchange="restoreData(event)" />
+      <div class="notice">
+        저장은 자동으로 돼. 입력하거나 수정할 때마다 브라우저에 바로 저장돼서 새로고침해도 유지돼.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>요약</h2>
+      <div class="summary">
+        <div class="item">
+          <div class="title">총 매입금</div>
+          <div class="value" id="sumBuy">0원</div>
+        </div>
+        <div class="item">
+          <div class="title">총 평가금</div>
+          <div class="value" id="sumValue">0원</div>
+        </div>
+        <div class="item">
+          <div class="title">총 손익</div>
+          <div class="value" id="sumProfit">0원</div>
+        </div>
+        <div class="item">
+          <div class="title">총 수익률</div>
+          <div class="value" id="sumRate">0%</div>
+        </div>
+        <div class="item">
+          <div class="title">보유 종목 수</div>
+          <div class="value" id="sumCount">0개</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>보유 종목</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>계좌</th>
+              <th>자산군</th>
+              <th>종목명</th>
+              <th>티커</th>
+              <th>수량</th>
+              <th>총 매입금</th>
+              <th>평균단가</th>
+              <th>현재가</th>
+              <th>평가금</th>
+              <th>손익</th>
+              <th>수익률</th>
+              <th>보유비중</th>
+              <th>삭제</th>
+            </tr>
+          </thead>
+          <tbody id="holdingsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h2>자산군 비중</h2>
+        <canvas id="assetChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h2>리밸런싱</h2>
+        <div class="grid-5">
+          <div>
+            <label for="targetStock">주식 목표%</label>
+            <input id="targetStock" type="number" step="any" placeholder="예: 60" />
+          </div>
+          <div>
+            <label for="targetBond">채권 목표%</label>
+            <input id="targetBond" type="number" step="any" placeholder="예: 20" />
+          </div>
+          <div>
+            <label for="targetGold">금 목표%</label>
+            <input id="targetGold" type="number" step="any" placeholder="예: 10" />
+          </div>
+          <div>
+            <label for="targetDollar">달러 목표%</label>
+            <input id="targetDollar" type="number" step="any" placeholder="예: 5" />
+          </div>
+          <div>
+            <label for="targetREIT">리츠 목표%</label>
+            <input id="targetREIT" type="number" step="any" placeholder="예: 5" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button onclick="saveTargetsAndRender()">목표 저장 / 계산</button>
+        </div>
+        <div id="rebalanceResult" class="rebalance-box"></div>
+        <div class="footer-note">
+          리밸런싱은 현재 평가금 기준으로 계산돼.  
+          목표 비중이 100이 아니어도 계산은 되지만, 보통 합계 100으로 맞추는 게 좋아.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "etf_portfolio_app_v2";
+    const TARGET_KEY = "etf_portfolio_targets_v2";
+
+    let holdings = [];
+    let targets = {
+      stock: 60,
+      bond: 20,
+      gold: 10,
+      dollar: 5,
+      reit: 5
+    };
+
+    let assetChart = null;
+
+    function won(n) {
+      const num = Number(n || 0);
+      return num.toLocaleString("ko-KR") + "원";
+    }
+
+    function num(val) {
+      const n = Number(val);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function pct(n) {
+      return `${num(n).toFixed(2)}%`;
+    }
+
+    function classifyAsset(name = "", ticker = "") {
+      const text = `${name} ${ticker}`.toLowerCase();
+
+      if (text.includes("금")) return "금";
+      if (text.includes("dollar") || text.includes("달러") || text.includes("sofr")) return "달러";
+      if (text.includes("리츠") || text.includes("reit") || text.includes("부동산")) return "리츠";
+      if (text.includes("채권") || text.includes("국채") || text.includes("bond") || text.includes("trf")) return "채권";
+      return "주식";
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
+      localStorage.setItem(TARGET_KEY, JSON.stringify(targets));
+    }
+
+    function loadData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const savedTargets = localStorage.getItem(TARGET_KEY);
+
+        if (saved) holdings = JSON.parse(saved);
+        if (savedTargets) targets = JSON.parse(savedTargets);
+      } catch (e) {
+        holdings = [];
+      }
+
+      document.getElementById("targetStock").value = targets.stock ?? "";
+      document.getElementById("targetBond").value = targets.bond ?? "";
+      document.getElementById("targetGold").value = targets.gold ?? "";
+      document.getElementById("targetDollar").value = targets.dollar ?? "";
+      document.getElementById("targetREIT").value = targets.reit ?? "";
+    }
+
+    function addHolding() {
+      const account = document.getElementById("account").value;
+      const name = document.getElementById("name").value.trim();
+      const ticker = document.getElementById("ticker").value.trim();
+      const qty = num(document.getElementById("qty").value);
+      const buy = num(document.getElementById("buy").value);
+      const price = num(document.getElementById("price").value);
+
+      if (!name) {
+        alert("종목명을 입력해줘.");
+        return;
+      }
+
+      holdings.push({
+        id: Date.now() + Math.random(),
+        account,
+        assetType: classifyAsset(name, ticker),
+        name,
+        ticker,
+        qty,
+        buy,
+        price
+      });
+
+      document.getElementById("name").value = "";
+      document.getElementById("ticker").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("buy").value = "";
+      document.getElementById("price").value = "";
+
+      saveData();
+      render();
+    }
+
+    function deleteHolding(id) {
+      holdings = holdings.filter(h => h.id !== id);
+      saveData();
+      render();
+    }
+
+    function updateField(id, field, value) {
+      const item = holdings.find(h => h.id === id);
+      if (!item) return;
+
+      if (["qty", "buy", "price"].includes(field)) {
+        item[field] = num(value);
+      } else {
+        item[field] = value;
+      }
+
+      if (field === "name" || field === "ticker") {
+        item.assetType = classifyAsset(item.name, item.ticker);
+      }
+
+      saveData();
+      render();
+    }
+
+    function renderSummary() {
+      const totalBuy = holdings.reduce((s, h) => s + num(h.buy), 0);
+      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+      const totalProfit = totalValue - totalBuy;
+      const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
+
+      document.getElementById("sumBuy").textContent = won(totalBuy);
+      document.getElementById("sumValue").textContent = won(totalValue);
+      document.getElementById("sumProfit").textContent = won(totalProfit);
+      document.getElementById("sumProfit").className = "value " + (totalProfit >= 0 ? "profit" : "loss");
+      document.getElementById("sumRate").textContent = pct(totalRate);
+      document.getElementById("sumRate").className = "value " + (totalRate >= 0 ? "profit" : "loss");
+      document.getElementById("sumCount").textContent = holdings.length.toLocaleString("ko-KR") + "개";
+    }
+
+    function renderTable() {
+      const body = document.getElementById("holdingsBody");
+      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+
+      body.innerHTML = "";
+
+      holdings.forEach(h => {
+        const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
+        const value = num(h.qty) * num(h.price);
+        const profit = value - num(h.buy);
+        const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
+        const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>
+            <select onchange="updateField(${h.id}, 'account', this.value)">
+              <option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option>
+              <option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option>
+            </select>
+          </td>
+          <td>
+            <select onchange="updateField(${h.id}, 'assetType', this.value)">
+              <option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option>
+              <option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option>
+              <option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option>
+              <option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option>
+              <option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option>
+            </select>
+          </td>
+          <td><input value="${h.name || ""}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
+          <td><input value="${h.ticker || ""}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
+          <td><input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
+          <td><input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
+          <td>${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
+          <td><input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
+          <td>${won(value)}</td>
+          <td class="${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
+          <td class="${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
+          <td>${pct(weight)}</td>
+          <td><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    function renderChart() {
+      const totals = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
+
+      holdings.forEach(h => {
+        const value = num(h.qty) * num(h.price);
+        totals[h.assetType] = (totals[h.assetType] || 0) + value;
+      });
+
+      const labels = Object.keys(totals).filter(k => totals[k] > 0);
+      const data = labels.map(k => totals[k]);
+
+      const ctx = document.getElementById("assetChart");
+
+      if (assetChart) assetChart.destroy();
+
+      assetChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels,
+          datasets: [{
+            data
+          }]
+        },
+        options: {
+          plugins: {
+            legend: {
+              position: "bottom"
+            }
+          }
+        }
+      });
+    }
+
+    function saveTargetsAndRender() {
+      targets = {
+        stock: num(document.getElementById("targetStock").value),
+        bond: num(document.getElementById("targetBond").value),
+        gold: num(document.getElementById("targetGold").value),
+        dollar: num(document.getElementById("targetDollar").value),
+        reit: num(document.getElementById("targetREIT").value)
+      };
+      saveData();
+      renderRebalance();
+    }
+
+    function renderRebalance() {
+      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+
+      const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
+      holdings.forEach(h => {
+        current[h.assetType] = (current[h.assetType] || 0) + num(h.qty) * num(h.price);
+      });
+
+      const map = {
+        주식: targets.stock,
+        채권: targets.bond,
+        금: targets.gold,
+        달러: targets.dollar,
+        리츠: targets.reit
+      };
+
+      let html = "";
+      const targetSum = Object.values(map).reduce((a, b) => a + num(b), 0);
+
+      html += `<div class="muted">목표 비중 합계: ${targetSum.toFixed(2)}%</div>`;
+
+      ["주식", "채권", "금", "달러", "리츠"].forEach(type => {
+        const nowValue = current[type] || 0;
+        const nowWeight = totalValue > 0 ? (nowValue / totalValue) * 100 : 0;
+        const targetWeight = num(map[type]);
+        const targetValue = totalValue * (targetWeight / 100);
+        const diff = targetValue - nowValue;
+
+        let actionText = "유지";
+        let actionClass = "";
+
+        if (diff > 0) {
+          actionText = `매수 ${won(diff)}`;
+          actionClass = "profit";
+        } else if (diff < 0) {
+          actionText = `매도 ${won(Math.abs(diff))}`;
+          actionClass = "loss";
+        }
+
+        html += `
+          <div>
+            <strong>${type}</strong> |
+            현재 ${nowWeight.toFixed(2)}% (${won(nowValue)}) |
+            목표 ${targetWeight.toFixed(2)}% (${won(targetValue)}) |
+            <span class="${actionClass}">${actionText}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById("rebalanceResult").innerHTML = html;
+    }
+
+    function backupData() {
+      const payload = {
+        holdings,
+        targets,
+        exportedAt: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "etf-portfolio-backup.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function restoreData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          holdings = Array.isArray(parsed.holdings) ? parsed.holdings : [];
+          targets = parsed.targets || targets;
+          saveData();
+          loadData();
+          render();
+          alert("복원 완료!");
+        } catch (err) {
+          alert("복원 실패. JSON 파일 형식을 확인해줘.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    }
+
+    function clearAllData() {
+      const ok = confirm("정말 전체 데이터를 삭제할까?");
+      if (!ok) return;
+
+      holdings = [];
+      saveData();
+      render();
+    }
+
+    function render() {
+      renderSummary();
+      renderTable();
+      renderChart();
+      renderRebalance();
+    }
+
+    loadData();
+    render();
+  </script>
 </body>
 </html>
