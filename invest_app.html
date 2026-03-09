@@ -132,7 +132,6 @@
     }
     .profit { color: #067647; font-weight: 700; }
     .loss { color: #b42318; font-weight: 700; }
-    .muted { color: #667085; }
     .two-col {
       display: grid;
       grid-template-columns: 1.2fr 1fr;
@@ -197,33 +196,18 @@
         <button class="secondary" onclick="reloadFromSupabase()">서버에서 다시 불러오기</button>
       </div>
       <div class="notice">
-        현재가는 Cloudflare Worker를 통해 자동으로 가져오고, 데이터는 Supabase에 저장돼서 다른 컴퓨터에서도 같은 내용이 보여.
+        현재가는 Worker로 자동 조회하고, 데이터는 Supabase에 저장돼서 다른 컴퓨터에서도 같게 보여.
       </div>
     </div>
 
     <div class="card">
       <h2>요약</h2>
       <div class="summary">
-        <div class="item">
-          <div class="title">총 매입금</div>
-          <div class="value" id="sumBuy">0원</div>
-        </div>
-        <div class="item">
-          <div class="title">총 평가금</div>
-          <div class="value" id="sumValue">0원</div>
-        </div>
-        <div class="item">
-          <div class="title">총 손익</div>
-          <div class="value" id="sumProfit">0원</div>
-        </div>
-        <div class="item">
-          <div class="title">총 수익률</div>
-          <div class="value" id="sumRate">0%</div>
-        </div>
-        <div class="item">
-          <div class="title">보유 종목 수</div>
-          <div class="value" id="sumCount">0개</div>
-        </div>
+        <div class="item"><div class="title">총 매입금</div><div class="value" id="sumBuy">0원</div></div>
+        <div class="item"><div class="title">총 평가금</div><div class="value" id="sumValue">0원</div></div>
+        <div class="item"><div class="title">총 손익</div><div class="value" id="sumProfit">0원</div></div>
+        <div class="item"><div class="title">총 수익률</div><div class="value" id="sumRate">0%</div></div>
+        <div class="item"><div class="title">보유 종목 수</div><div class="value" id="sumCount">0개</div></div>
       </div>
     </div>
 
@@ -263,26 +247,11 @@
       <div class="card">
         <h2>리밸런싱</h2>
         <div class="grid-5">
-          <div>
-            <label for="targetStock">주식 목표%</label>
-            <input id="targetStock" type="number" step="any" placeholder="예: 60" />
-          </div>
-          <div>
-            <label for="targetBond">채권 목표%</label>
-            <input id="targetBond" type="number" step="any" placeholder="예: 20" />
-          </div>
-          <div>
-            <label for="targetGold">금 목표%</label>
-            <input id="targetGold" type="number" step="any" placeholder="예: 10" />
-          </div>
-          <div>
-            <label for="targetDollar">달러 목표%</label>
-            <input id="targetDollar" type="number" step="any" placeholder="예: 5" />
-          </div>
-          <div>
-            <label for="targetREIT">리츠 목표%</label>
-            <input id="targetREIT" type="number" step="any" placeholder="예: 5" />
-          </div>
+          <div><label for="targetStock">주식 목표%</label><input id="targetStock" type="number" step="any" placeholder="예: 60" /></div>
+          <div><label for="targetBond">채권 목표%</label><input id="targetBond" type="number" step="any" placeholder="예: 20" /></div>
+          <div><label for="targetGold">금 목표%</label><input id="targetGold" type="number" step="any" placeholder="예: 10" /></div>
+          <div><label for="targetDollar">달러 목표%</label><input id="targetDollar" type="number" step="any" placeholder="예: 5" /></div>
+          <div><label for="targetREIT">리츠 목표%</label><input id="targetREIT" type="number" step="any" placeholder="예: 5" /></div>
         </div>
         <div class="btn-row">
           <button onclick="renderRebalance()">계산</button>
@@ -296,7 +265,9 @@
     const WORKER_URL = "https://etf-price-worker.bellayeon.workers.dev/";
     const supabaseUrl = "https://elitonibcpypezuhzwch.supabase.co";
     const supabaseKey = "sb_publishable_ciS23u-IPzbLgaXQf27TMw___Sofvw3";
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const { createClient } = supabase;
+    const db = createClient(supabaseUrl, supabaseKey);
 
     let holdings = [];
     let assetChart = null;
@@ -336,13 +307,13 @@
     }
 
     async function reloadFromSupabase() {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("holdings")
         .select("*")
         .order("id", { ascending: true });
 
       if (error) {
-        alert("서버에서 데이터 불러오기 실패");
+        alert("초기 불러오기 실패: " + error.message);
         console.error(error);
         return;
       }
@@ -378,13 +349,13 @@
         price
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("holdings")
         .insert([item])
         .select();
 
       if (error) {
-        alert("서버 저장 실패: " + error.message");
+        alert("서버 저장 실패: " + error.message);
         console.error(error);
         return;
       }
@@ -403,13 +374,13 @@
     }
 
     async function deleteHolding(id) {
-      const { error } = await supabase
+      const { error } = await db
         .from("holdings")
         .delete()
         .eq("id", id);
 
       if (error) {
-        alert("삭제 실패");
+        alert("삭제 실패: " + error.message);
         console.error(error);
         return;
       }
@@ -443,13 +414,13 @@
         price: item.price
       };
 
-      const { error } = await supabase
+      const { error } = await db
         .from("holdings")
         .update(updatePayload)
         .eq("id", id);
 
       if (error) {
-        alert("수정 저장 실패");
+        alert("수정 저장 실패: " + error.message);
         console.error(error);
         return;
       }
@@ -469,13 +440,13 @@
 
       item.price = latest;
 
-      const { error } = await supabase
+      const { error } = await db
         .from("holdings")
         .update({ price: latest })
         .eq("id", id);
 
       if (error) {
-        alert("가격 저장 실패");
+        alert("가격 저장 실패: " + error.message);
         console.error(error);
         return;
       }
@@ -489,7 +460,7 @@
           const latest = await fetchPriceFromWorker(h.ticker);
           if (latest) {
             h.price = latest;
-            await supabase
+            await db
               .from("holdings")
               .update({ price: latest })
               .eq("id", h.id);
@@ -644,9 +615,10 @@
       renderRebalance();
     }
 
-    reloadFromSupabase();
+    reloadFromSupabase().catch(err => {
+      alert("초기 불러오기 실패: " + err.message);
+      console.error(err);
+    });
   </script>
 </body>
 </html>
-
-
