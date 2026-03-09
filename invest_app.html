@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ETF 투자 관리</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -113,7 +114,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1200px;
+      min-width: 1250px;
     }
     th, td {
       border-bottom: 1px solid #eceff5;
@@ -146,11 +147,6 @@
     .rebalance-box {
       line-height: 1.8;
       font-size: 15px;
-    }
-    .footer-note {
-      margin-top: 12px;
-      color: #667085;
-      font-size: 13px;
     }
     @media (max-width: 900px) {
       .grid, .grid-5, .summary, .two-col {
@@ -198,14 +194,10 @@
       <div class="btn-row">
         <button onclick="addHolding()">추가</button>
         <button class="secondary" onclick="updateAllPrices()">가격 자동 업데이트</button>
-        <button class="secondary" onclick="backupData()">백업(JSON)</button>
-        <button class="secondary" onclick="document.getElementById('restoreFile').click()">복원(JSON)</button>
-        <button class="danger" onclick="clearAllData()">전체 삭제</button>
+        <button class="secondary" onclick="reloadFromSupabase()">서버에서 다시 불러오기</button>
       </div>
-      <input id="restoreFile" type="file" accept=".json,application/json" style="display:none" onchange="restoreData(event)" />
       <div class="notice">
-        저장은 자동으로 돼. 입력하거나 수정할 때마다 브라우저에 바로 저장돼서 새로고침해도 유지돼.  
-        현재가를 비워두고 추가하면 Worker를 통해 자동으로 가격을 가져와.
+        현재가는 Cloudflare Worker를 통해 자동으로 가져오고, 데이터는 Supabase에 저장돼서 다른 컴퓨터에서도 같은 내용이 보여.
       </div>
     </div>
 
@@ -293,35 +285,24 @@
           </div>
         </div>
         <div class="btn-row">
-          <button onclick="saveTargetsAndRender()">목표 저장 / 계산</button>
+          <button onclick="renderRebalance()">계산</button>
         </div>
         <div id="rebalanceResult" class="rebalance-box"></div>
-        <div class="footer-note">
-          리밸런싱은 현재 평가금 기준으로 계산돼.
-        </div>
       </div>
     </div>
   </div>
 
   <script>
-    const STORAGE_KEY = "etf_portfolio_app_v3";
-    const TARGET_KEY = "etf_portfolio_targets_v3";
     const WORKER_URL = "https://etf-price-worker.bellayeon.workers.dev/";
+    const supabaseUrl = "https://elitonibcpypezuhzwch.supabase.co";
+    const supabaseKey = "sb_publishable_ciS23u-IPzbLgaXQf27TMw___Sofvw3";
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     let holdings = [];
-    let targets = {
-      stock: 60,
-      bond: 20,
-      gold: 10,
-      dollar: 5,
-      reit: 5
-    };
-
     let assetChart = null;
 
     function won(n) {
-      const num = Number(n || 0);
-      return num.toLocaleString("ko-KR") + "원";
+      return Number(n || 0).toLocaleString("ko-KR") + "원";
     }
 
     function num(val) {
@@ -335,7 +316,6 @@
 
     function classifyAsset(name = "", ticker = "") {
       const text = `${name} ${ticker}`.toLowerCase();
-
       if (text.includes("금")) return "금";
       if (text.includes("dollar") || text.includes("달러") || text.includes("sofr")) return "달러";
       if (text.includes("리츠") || text.includes("reit") || text.includes("부동산")) return "리츠";
@@ -345,7 +325,6 @@
 
     async function fetchPriceFromWorker(ticker) {
       if (!ticker) return 0;
-
       try {
         const res = await fetch(`${WORKER_URL}?ticker=${encodeURIComponent(ticker)}`);
         const data = await res.json();
@@ -356,27 +335,20 @@
       }
     }
 
-    function saveData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
-      localStorage.setItem(TARGET_KEY, JSON.stringify(targets));
-    }
+    async function reloadFromSupabase() {
+      const { data, error } = await supabase
+        .from("holdings")
+        .select("*")
+        .order("id", { ascending: true });
 
-    function loadData() {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        const savedTargets = localStorage.getItem(TARGET_KEY);
-
-        if (saved) holdings = JSON.parse(saved);
-        if (savedTargets) targets = JSON.parse(savedTargets);
-      } catch (e) {
-        holdings = [];
+      if (error) {
+        alert("서버에서 데이터 불러오기 실패");
+        console.error(error);
+        return;
       }
 
-      document.getElementById("targetStock").value = targets.stock ?? "";
-      document.getElementById("targetBond").value = targets.bond ?? "";
-      document.getElementById("targetGold").value = targets.gold ?? "";
-      document.getElementById("targetDollar").value = targets.dollar ?? "";
-      document.getElementById("targetREIT").value = targets.reit ?? "";
+      holdings = data || [];
+      render();
     }
 
     async function addHolding() {
@@ -396,8 +368,7 @@
         price = await fetchPriceFromWorker(ticker);
       }
 
-      holdings.push({
-        id: Date.now() + Math.random(),
+      const item = {
         account,
         assetType: classifyAsset(name, ticker),
         name,
@@ -405,7 +376,22 @@
         qty,
         buy,
         price
-      });
+      };
+
+      const { data, error } = await supabase
+        .from("holdings")
+        .insert([item])
+        .select();
+
+      if (error) {
+        alert("서버 저장 실패");
+        console.error(error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        holdings.push(data[0]);
+      }
 
       document.getElementById("name").value = "";
       document.getElementById("ticker").value = "";
@@ -413,31 +399,61 @@
       document.getElementById("buy").value = "";
       document.getElementById("price").value = "";
 
-      saveData();
       render();
     }
 
-    function deleteHolding(id) {
+    async function deleteHolding(id) {
+      const { error } = await supabase
+        .from("holdings")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        alert("삭제 실패");
+        console.error(error);
+        return;
+      }
+
       holdings = holdings.filter(h => h.id !== id);
-      saveData();
       render();
     }
 
-    function updateField(id, field, value) {
+    async function updateField(id, field, value) {
       const item = holdings.find(h => h.id === id);
       if (!item) return;
 
+      let updateValue = value;
       if (["qty", "buy", "price"].includes(field)) {
-        item[field] = num(value);
-      } else {
-        item[field] = value;
+        updateValue = num(value);
       }
+
+      item[field] = updateValue;
 
       if (field === "name" || field === "ticker") {
         item.assetType = classifyAsset(item.name, item.ticker);
       }
 
-      saveData();
+      const updatePayload = {
+        account: item.account,
+        assetType: item.assetType,
+        name: item.name,
+        ticker: item.ticker,
+        qty: item.qty,
+        buy: item.buy,
+        price: item.price
+      };
+
+      const { error } = await supabase
+        .from("holdings")
+        .update(updatePayload)
+        .eq("id", id);
+
+      if (error) {
+        alert("수정 저장 실패");
+        console.error(error);
+        return;
+      }
+
       render();
     }
 
@@ -446,23 +462,40 @@
       if (!item || !item.ticker) return;
 
       const latest = await fetchPriceFromWorker(item.ticker);
-      if (latest) {
-        item.price = latest;
-        saveData();
-        render();
-      } else {
+      if (!latest) {
         alert("가격을 불러오지 못했어.");
+        return;
       }
+
+      item.price = latest;
+
+      const { error } = await supabase
+        .from("holdings")
+        .update({ price: latest })
+        .eq("id", id);
+
+      if (error) {
+        alert("가격 저장 실패");
+        console.error(error);
+        return;
+      }
+
+      render();
     }
 
     async function updateAllPrices() {
       for (const h of holdings) {
         if (h.ticker) {
           const latest = await fetchPriceFromWorker(h.ticker);
-          if (latest) h.price = latest;
+          if (latest) {
+            h.price = latest;
+            await supabase
+              .from("holdings")
+              .update({ price: latest })
+              .eq("id", h.id);
+          }
         }
       }
-      saveData();
       render();
       alert("가격 업데이트 완료!");
     }
@@ -485,7 +518,6 @@
     function renderTable() {
       const body = document.getElementById("holdingsBody");
       const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-
       body.innerHTML = "";
 
       holdings.forEach(h => {
@@ -541,7 +573,6 @@
       const data = labels.map(k => totals[k]);
 
       const ctx = document.getElementById("assetChart");
-
       if (assetChart) assetChart.destroy();
 
       assetChart = new Chart(ctx, {
@@ -558,43 +589,27 @@
       });
     }
 
-    function saveTargetsAndRender() {
-      targets = {
-        stock: num(document.getElementById("targetStock").value),
-        bond: num(document.getElementById("targetBond").value),
-        gold: num(document.getElementById("targetGold").value),
-        dollar: num(document.getElementById("targetDollar").value),
-        reit: num(document.getElementById("targetREIT").value)
-      };
-      saveData();
-      renderRebalance();
-    }
-
     function renderRebalance() {
-      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+      const stock = num(document.getElementById("targetStock").value);
+      const bond = num(document.getElementById("targetBond").value);
+      const gold = num(document.getElementById("targetGold").value);
+      const dollar = num(document.getElementById("targetDollar").value);
+      const reit = num(document.getElementById("targetREIT").value);
 
+      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
       const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
+
       holdings.forEach(h => {
         current[h.assetType] = (current[h.assetType] || 0) + num(h.qty) * num(h.price);
       });
 
-      const map = {
-        주식: targets.stock,
-        채권: targets.bond,
-        금: targets.gold,
-        달러: targets.dollar,
-        리츠: targets.reit
-      };
+      const targets = { 주식: stock, 채권: bond, 금: gold, 달러: dollar, 리츠: reit };
 
       let html = "";
-      const targetSum = Object.values(map).reduce((a, b) => a + num(b), 0);
-
-      html += `<div class="muted">목표 비중 합계: ${targetSum.toFixed(2)}%</div>`;
-
       ["주식", "채권", "금", "달러", "리츠"].forEach(type => {
         const nowValue = current[type] || 0;
         const nowWeight = totalValue > 0 ? (nowValue / totalValue) * 100 : 0;
-        const targetWeight = num(map[type]);
+        const targetWeight = num(targets[type]);
         const targetValue = totalValue * (targetWeight / 100);
         const diff = targetValue - nowValue;
 
@@ -622,53 +637,6 @@
       document.getElementById("rebalanceResult").innerHTML = html;
     }
 
-    function backupData() {
-      const payload = {
-        holdings,
-        targets,
-        exportedAt: new Date().toISOString()
-      };
-
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "etf-portfolio-backup.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function restoreData(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const parsed = JSON.parse(e.target.result);
-          holdings = Array.isArray(parsed.holdings) ? parsed.holdings : [];
-          targets = parsed.targets || targets;
-          saveData();
-          loadData();
-          render();
-          alert("복원 완료!");
-        } catch (err) {
-          alert("복원 실패. JSON 파일 형식을 확인해줘.");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = "";
-    }
-
-    function clearAllData() {
-      const ok = confirm("정말 전체 데이터를 삭제할까?");
-      if (!ok) return;
-
-      holdings = [];
-      saveData();
-      render();
-    }
-
     function render() {
       renderSummary();
       renderTable();
@@ -676,8 +644,7 @@
       renderRebalance();
     }
 
-    loadData();
-    render();
+    reloadFromSupabase();
   </script>
 </body>
 </html>
