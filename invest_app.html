@@ -17,15 +17,15 @@
     .wrap {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 24px 16px 48px;
+      padding: 20px 14px 40px;
     }
     h1 {
-      margin: 0 0 20px;
-      font-size: 36px;
+      margin: 0 0 18px;
+      font-size: 34px;
       font-weight: 800;
     }
     h2 {
-      margin: 28px 0 12px;
+      margin: 0 0 14px;
       font-size: 24px;
     }
     .card {
@@ -44,6 +44,11 @@
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
     label {
       display: block;
@@ -92,21 +97,38 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
     }
-    .summary .item {
+    .summary .item, .subsummary .item {
       background: #f8faff;
       border: 1px solid #e3ebff;
       border-radius: 14px;
       padding: 14px;
     }
-    .summary .title {
+    .summary .title, .subsummary .title {
       font-size: 13px;
       color: #667085;
       margin-bottom: 8px;
       font-weight: 700;
     }
-    .summary .value {
+    .summary .value, .subsummary .value {
       font-size: 24px;
       font-weight: 800;
+    }
+    .subsummary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .account-block {
+      background: #fcfdff;
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .account-name {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 10px;
     }
     .table-wrap {
       overflow-x: auto;
@@ -147,11 +169,20 @@
       line-height: 1.8;
       font-size: 15px;
     }
+    .last-update {
+      font-size: 13px;
+      color: #667085;
+      margin-top: 10px;
+    }
     @media (max-width: 900px) {
-      .grid, .grid-5, .summary, .two-col {
+      .grid, .grid-5, .summary, .two-col, .grid-2, .subsummary {
         grid-template-columns: 1fr;
       }
       h1 { font-size: 28px; }
+      .summary .value, .subsummary .value { font-size: 21px; }
+      .btn-row button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -198,16 +229,39 @@
       <div class="notice">
         현재가는 Worker로 자동 조회하고, 데이터는 Supabase에 저장돼서 다른 컴퓨터에서도 같게 보여.
       </div>
+      <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
     </div>
 
     <div class="card">
-      <h2>요약</h2>
+      <h2>전체 요약</h2>
       <div class="summary">
         <div class="item"><div class="title">총 매입금</div><div class="value" id="sumBuy">0원</div></div>
         <div class="item"><div class="title">총 평가금</div><div class="value" id="sumValue">0원</div></div>
         <div class="item"><div class="title">총 손익</div><div class="value" id="sumProfit">0원</div></div>
         <div class="item"><div class="title">총 수익률</div><div class="value" id="sumRate">0%</div></div>
         <div class="item"><div class="title">보유 종목 수</div><div class="value" id="sumCount">0개</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>계좌별 요약</h2>
+      <div class="grid-2">
+        <div class="account-block">
+          <div class="account-name">ISA</div>
+          <div class="subsummary">
+            <div class="item"><div class="title">평가금</div><div class="value" id="isaValue">0원</div></div>
+            <div class="item"><div class="title">손익</div><div class="value" id="isaProfit">0원</div></div>
+            <div class="item"><div class="title">수익률</div><div class="value" id="isaRate">0%</div></div>
+          </div>
+        </div>
+        <div class="account-block">
+          <div class="account-name">연금저축</div>
+          <div class="subsummary">
+            <div class="item"><div class="title">평가금</div><div class="value" id="pensionValue">0원</div></div>
+            <div class="item"><div class="title">손익</div><div class="value" id="pensionProfit">0원</div></div>
+            <div class="item"><div class="title">수익률</div><div class="value" id="pensionRate">0%</div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -254,7 +308,7 @@
           <div><label for="targetREIT">리츠 목표%</label><input id="targetREIT" type="number" step="any" placeholder="예: 5" /></div>
         </div>
         <div class="btn-row">
-          <button onclick="renderRebalance()">계산</button>
+          <button onclick="saveTargetsAndRender()">목표 저장 / 계산</button>
         </div>
         <div id="rebalanceResult" class="rebalance-box"></div>
       </div>
@@ -271,6 +325,13 @@
 
     let holdings = [];
     let assetChart = null;
+    let targets = JSON.parse(localStorage.getItem("portfolio_targets_v1") || `{
+      "stock": 60,
+      "bond": 20,
+      "gold": 10,
+      "dollar": 5,
+      "reit": 5
+    }`);
 
     function won(n) {
       return Number(n || 0).toLocaleString("ko-KR") + "원";
@@ -283,6 +344,12 @@
 
     function pct(n) {
       return `${num(n).toFixed(2)}%`;
+    }
+
+    function setLastUpdateText() {
+      const now = new Date();
+      const formatted = now.toLocaleString("ko-KR");
+      document.getElementById("lastUpdateText").textContent = "마지막 업데이트: " + formatted;
     }
 
     function classifyAsset(name = "", ticker = "") {
@@ -319,6 +386,7 @@
       }
 
       holdings = data || [];
+      applySavedTargetsToInputs();
       render();
     }
 
@@ -370,6 +438,7 @@
       document.getElementById("buy").value = "";
       document.getElementById("price").value = "";
 
+      setLastUpdateText();
       render();
     }
 
@@ -451,6 +520,7 @@
         return;
       }
 
+      setLastUpdateText();
       render();
     }
 
@@ -467,6 +537,7 @@
           }
         }
       }
+      setLastUpdateText();
       render();
       alert("가격 업데이트 완료!");
     }
@@ -484,6 +555,27 @@
       document.getElementById("sumRate").textContent = pct(totalRate);
       document.getElementById("sumRate").className = "value " + (totalRate >= 0 ? "profit" : "loss");
       document.getElementById("sumCount").textContent = holdings.length.toLocaleString("ko-KR") + "개";
+    }
+
+    function renderAccountSummary() {
+      const isaItems = holdings.filter(h => h.account === "ISA");
+      const pensionItems = holdings.filter(h => h.account === "연금저축");
+
+      renderOneAccountSummary(isaItems, "isaValue", "isaProfit", "isaRate");
+      renderOneAccountSummary(pensionItems, "pensionValue", "pensionProfit", "pensionRate");
+    }
+
+    function renderOneAccountSummary(items, valueId, profitId, rateId) {
+      const totalBuy = items.reduce((s, h) => s + num(h.buy), 0);
+      const totalValue = items.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+      const totalProfit = totalValue - totalBuy;
+      const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
+
+      document.getElementById(valueId).textContent = won(totalValue);
+      document.getElementById(profitId).textContent = won(totalProfit);
+      document.getElementById(profitId).className = "value " + (totalProfit >= 0 ? "profit" : "loss");
+      document.getElementById(rateId).textContent = pct(totalRate);
+      document.getElementById(rateId).className = "value " + (totalRate >= 0 ? "profit" : "loss");
     }
 
     function renderTable() {
@@ -560,13 +652,27 @@
       });
     }
 
-    function renderRebalance() {
-      const stock = num(document.getElementById("targetStock").value);
-      const bond = num(document.getElementById("targetBond").value);
-      const gold = num(document.getElementById("targetGold").value);
-      const dollar = num(document.getElementById("targetDollar").value);
-      const reit = num(document.getElementById("targetREIT").value);
+    function applySavedTargetsToInputs() {
+      document.getElementById("targetStock").value = targets.stock ?? 60;
+      document.getElementById("targetBond").value = targets.bond ?? 20;
+      document.getElementById("targetGold").value = targets.gold ?? 10;
+      document.getElementById("targetDollar").value = targets.dollar ?? 5;
+      document.getElementById("targetREIT").value = targets.reit ?? 5;
+    }
 
+    function saveTargetsAndRender() {
+      targets = {
+        stock: num(document.getElementById("targetStock").value),
+        bond: num(document.getElementById("targetBond").value),
+        gold: num(document.getElementById("targetGold").value),
+        dollar: num(document.getElementById("targetDollar").value),
+        reit: num(document.getElementById("targetREIT").value)
+      };
+      localStorage.setItem("portfolio_targets_v1", JSON.stringify(targets));
+      renderRebalance();
+    }
+
+    function renderRebalance() {
       const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
       const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
 
@@ -574,13 +680,19 @@
         current[h.assetType] = (current[h.assetType] || 0) + num(h.qty) * num(h.price);
       });
 
-      const targets = { 주식: stock, 채권: bond, 금: gold, 달러: dollar, 리츠: reit };
+      const targetMap = {
+        주식: targets.stock,
+        채권: targets.bond,
+        금: targets.gold,
+        달러: targets.dollar,
+        리츠: targets.reit
+      };
 
       let html = "";
       ["주식", "채권", "금", "달러", "리츠"].forEach(type => {
         const nowValue = current[type] || 0;
         const nowWeight = totalValue > 0 ? (nowValue / totalValue) * 100 : 0;
-        const targetWeight = num(targets[type]);
+        const targetWeight = num(targetMap[type]);
         const targetValue = totalValue * (targetWeight / 100);
         const diff = targetValue - nowValue;
 
@@ -597,10 +709,7 @@
 
         html += `
           <div>
-            <strong>${type}</strong> |
-            현재 ${nowWeight.toFixed(2)}% (${won(nowValue)}) |
-            목표 ${targetWeight.toFixed(2)}% (${won(targetValue)}) |
-            <span class="${actionClass}">${actionText}</span>
+            <strong>${type}</strong> | 현재 ${nowWeight.toFixed(2)}% (${won(nowValue)}) | 목표 ${targetWeight.toFixed(2)}% (${won(targetValue)}) | <span class="${actionClass}">${actionText}</span>
           </div>
         `;
       });
@@ -610,6 +719,7 @@
 
     function render() {
       renderSummary();
+      renderAccountSummary();
       renderTable();
       renderChart();
       renderRebalance();
