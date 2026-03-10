@@ -187,7 +187,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1540px;
+      min-width: 1600px;
       table-layout: auto;
     }
 
@@ -259,11 +259,15 @@
     th.rate-cell,
     td.weight-cell,
     th.weight-cell,
-    td.dividend-yield-cell,
-    th.dividend-yield-cell,
     td.dividend-value-cell,
     th.dividend-value-cell {
       min-width: 92px;
+    }
+
+    td.dividend-input-cell,
+    th.dividend-input-cell {
+      min-width: 110px;
+      width: 110px;
     }
 
     td.action-cell,
@@ -301,9 +305,18 @@
     }
 
     td.buy-cell input,
-    td.price-cell input,
-    td.dividend-yield-cell input {
+    td.price-cell input {
       min-width: 88px;
+    }
+
+    td.dividend-input-cell input {
+      min-width: 96px;
+      width: 96px;
+      text-align: right;
+    }
+
+    td.dividend-value-cell {
+      line-height: 1.35;
     }
 
     .profit { color: #067647; font-weight: 700; }
@@ -367,6 +380,11 @@
       padding: 8px 4px 0;
     }
 
+    .muted {
+      font-size: 12px;
+      color: #667085;
+    }
+
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
@@ -387,7 +405,7 @@
       }
 
       table {
-        min-width: 1500px;
+        min-width: 1560px;
       }
     }
   </style>
@@ -442,6 +460,12 @@
       <div class="help-box">
         금현물 입력 예시<br>
         계좌: 금현물계좌 / 종목명: KRX 금현물 / 티커: KRX-GOLD / 수량: 9 / 현재가: 금 1g 가격 직접 입력
+      </div>
+
+      <div class="help-box">
+        배당 입력 방식<br>
+        이제 배당은 <strong>배당률%</strong> 대신 <strong>올해 예상 주당 배당금(원)</strong>으로 입력해.<br>
+        예: 올해 총 예상 배당 14,960원 / 보유수량 22주 → 주당 680원 입력
       </div>
 
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
@@ -559,11 +583,11 @@
       <h2>배당 요약</h2>
       <div class="grid-4">
         <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
-          <div class="title">연 예상 배당금</div>
+          <div class="title">올해 예상 배당금</div>
           <div class="value" id="dividendYear">0원</div>
         </div>
         <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
-          <div class="title">월 환산 배당금</div>
+          <div class="title">월 환산 예상금</div>
           <div class="value" id="dividendMonth">0원</div>
         </div>
         <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
@@ -634,7 +658,6 @@
     }
 
     function classifyAsset(name = "", ticker = "", account = "") {
-      const rawText = `${name} ${ticker}`.toLowerCase();
       const text = normalizeText(`${name} ${ticker}`);
 
       if (account === "금현물계좌") return "금";
@@ -715,7 +738,8 @@
 
       holdings = (data || []).map(h => ({
         ...h,
-        dividendYield: h.dividendYield ?? 0,
+        expectedDividendPerShare: Number(h.expectedDividendPerShare ?? 0),
+        dividendYield: Number(h.dividendYield ?? 0),
         assetType: classifyAsset(h.name, h.ticker, h.account)
       }));
 
@@ -748,6 +772,7 @@
         qty,
         buy,
         price,
+        expectedDividendPerShare: 0,
         dividendYield: 0
       };
 
@@ -765,7 +790,8 @@
       if (data && data.length > 0) {
         const inserted = {
           ...data[0],
-          dividendYield: data[0].dividendYield ?? 0,
+          expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0),
+          dividendYield: Number(data[0].dividendYield ?? 0),
           assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account)
         };
         holdings.push(inserted);
@@ -799,7 +825,7 @@
       if (!item) return;
 
       let updateValue = value;
-      if (["qty", "buy", "price", "dividendYield"].includes(field)) {
+      if (["qty", "buy", "price", "dividendYield", "expectedDividendPerShare"].includes(field)) {
         updateValue = num(value);
       }
 
@@ -817,6 +843,7 @@
         qty: item.qty,
         buy: item.buy,
         price: item.price,
+        expectedDividendPerShare: item.expectedDividendPerShare || 0,
         dividendYield: item.dividendYield || 0
       };
 
@@ -924,11 +951,19 @@
     }
 
     function renderDividendSummary() {
-      const dividendItems = holdings.filter(h => num(h.dividendYield) > 0);
+      const dividendItems = holdings.filter(h =>
+        num(h.expectedDividendPerShare) > 0 || num(h.dividendYield) > 0
+      );
+
       const yearly = dividendItems.reduce((s, h) => {
+        if (num(h.expectedDividendPerShare) > 0) {
+          return s + num(h.qty) * num(h.expectedDividendPerShare);
+        }
+
         const value = num(h.qty) * num(h.price);
         return s + value * (num(h.dividendYield) / 100);
       }, 0);
+
       const base = dividendItems.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
 
       document.getElementById("dividendYear").textContent = won(yearly);
@@ -944,7 +979,18 @@
         const profit = value - num(h.buy);
         const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
-        const yearlyDividend = value * (num(h.dividendYield) / 100);
+
+        const expectedDividendPerShare = num(h.expectedDividendPerShare);
+        const fallbackYield = num(h.dividendYield);
+
+        const yearlyDividend = expectedDividendPerShare > 0
+          ? num(h.qty) * expectedDividendPerShare
+          : value * (fallbackYield / 100);
+
+        const derivedDividendYield = expectedDividendPerShare > 0
+          ? (num(h.price) > 0 ? (expectedDividendPerShare / num(h.price)) * 100 : 0)
+          : fallbackYield;
+
         const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
 
         return `
@@ -993,10 +1039,19 @@
             <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
             <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
             <td class="weight-cell num">${pct(weight)}</td>
-            <td class="dividend-yield-cell num">
-              <input type="number" step="any" value="${h.dividendYield || 0}" onchange="updateField(${h.id}, 'dividendYield', this.value)" />
+            <td class="dividend-input-cell num">
+              <input
+                type="number"
+                step="any"
+                value="${expectedDividendPerShare || 0}"
+                title="올해 예상 주당 배당금(원)"
+                onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)"
+              />
             </td>
-            <td class="dividend-value-cell num">${won(yearlyDividend)}</td>
+            <td class="dividend-value-cell num">
+              ${won(yearlyDividend)}<br>
+              <span class="muted">${pct(derivedDividendYield)}</span>
+            </td>
             <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
             <td class="action-cell"><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
           </tr>
@@ -1040,8 +1095,8 @@
                         <th class="profit-cell num">손익</th>
                         <th class="rate-cell num">수익률</th>
                         <th class="weight-cell num">보유비중</th>
-                        <th class="dividend-yield-cell num">배당률%</th>
-                        <th class="dividend-value-cell num">연배당</th>
+                        <th class="dividend-input-cell num">올해예상주당배당</th>
+                        <th class="dividend-value-cell num">예상배당 / 수익률</th>
                         <th class="action-cell">가격갱신</th>
                         <th class="action-cell">삭제</th>
                       </tr>
