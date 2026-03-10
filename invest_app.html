@@ -464,11 +464,12 @@
 
     function classifyAsset(name = "", ticker = "", account = "") {
       const text = `${name} ${ticker} ${account}`.toLowerCase();
-      if (text.includes("금") || text.includes("gold")) return "금";
       if (text.includes("dollar") || text.includes("달러") || text.includes("sofr")) return "달러";
       if (text.includes("리츠") || text.includes("reit") || text.includes("부동산")) return "리츠";
       if (text.includes("채권") || text.includes("국채") || text.includes("bond") || text.includes("trf")) return "채권";
+      if (text.includes("금현물") || text.includes("krx금") || text.includes("gold") || text.includes("ace krx금현물") || text.includes("krx gold")) return "금";
       return "주식";
+      
     }
 
     function isManualGold(item) {
@@ -527,7 +528,7 @@
 
       const item = {
         account,
-        assetType: classifyAsset(name, ticker, account),
+        assetType: classifyAsset(name, ticker),
         name,
         ticker,
         qty,
@@ -584,7 +585,7 @@
       item[field] = updateValue;
 
       if (field === "name" || field === "ticker" || field === "account") {
-        item.assetType = classifyAsset(item.name, item.ticker, item.account);
+        item.assetType = classifyAsset(item.name, item.ticker);
       }
 
       const updatePayload = {
@@ -976,3 +977,4 @@
   </script>
 </body>
 </html>
+
