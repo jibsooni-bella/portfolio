@@ -15,7 +15,7 @@
       color: #222;
     }
     .wrap {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 20px 14px 40px;
     }
@@ -27,6 +27,10 @@
     h2 {
       margin: 0 0 14px;
       font-size: 24px;
+    }
+    h3 {
+      margin: 0 0 12px;
+      font-size: 20px;
     }
     .card {
       background: #fff;
@@ -53,7 +57,7 @@
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 12px;
     }
     .grid-2 {
       display: grid;
@@ -112,6 +116,7 @@
       border: 1px solid #e3ebff;
       border-radius: 14px;
       padding: 14px;
+      min-width: 0;
     }
     .summary .title, .subsummary .title {
       font-size: 13px;
@@ -120,8 +125,12 @@
       font-weight: 700;
     }
     .summary .value, .subsummary .value {
-      font-size: 24px;
+      font-size: clamp(18px, 2vw, 24px);
       font-weight: 800;
+      line-height: 1.25;
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
     }
     .subsummary {
       display: grid;
@@ -134,6 +143,7 @@
       border: 1px solid #e7eefc;
       border-radius: 14px;
       padding: 14px;
+      min-width: 0;
     }
     .account-name {
       font-size: 18px;
@@ -193,12 +203,36 @@
       font-size: 13px;
       line-height: 1.6;
     }
+    .account-section {
+      margin-bottom: 18px;
+    }
+    .account-section:last-child {
+      margin-bottom: 0;
+    }
+    .account-section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0 0 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e7eefc;
+    }
+    .empty-text {
+      color: #667085;
+      font-size: 14px;
+      padding: 8px 4px 0;
+    }
+    @media (max-width: 1100px) {
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
     @media (max-width: 900px) {
-      .grid, .grid-5, .grid-4, .grid-3, .summary, .two-col, .grid-2, .subsummary {
+      .grid, .grid-5, .grid-4, .summary, .two-col, .grid-2, .subsummary {
         grid-template-columns: 1fr;
       }
       h1 { font-size: 28px; }
-      .summary .value, .subsummary .value { font-size: 21px; }
       .btn-row button { width: 100%; }
     }
   </style>
@@ -303,31 +337,7 @@
 
     <div class="card">
       <h2>보유 종목</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>계좌</th>
-              <th>자산군</th>
-              <th>종목명</th>
-              <th>티커</th>
-              <th>수량</th>
-              <th>총 매입금</th>
-              <th>평균단가</th>
-              <th>현재가</th>
-              <th>평가금</th>
-              <th>손익</th>
-              <th>수익률</th>
-              <th>보유비중</th>
-              <th>배당률%</th>
-              <th>연배당</th>
-              <th>가격갱신</th>
-              <th>삭제</th>
-            </tr>
-          </thead>
-          <tbody id="holdingsBody"></tbody>
-        </table>
-      </div>
+      <div id="holdingsSections"></div>
     </div>
 
     <div class="two-col">
@@ -371,7 +381,7 @@
         </div>
 
         <div class="table-wrap" style="margin-top:12px;">
-          <table style="min-width: 100%;">
+          <table style="min-width:100%;">
             <thead>
               <tr>
                 <th>월</th>
@@ -704,55 +714,102 @@
       document.getElementById("dividendBase").textContent = won(base);
     }
 
-    function renderTable() {
-      const body = document.getElementById("holdingsBody");
-      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      body.innerHTML = "";
-
-      holdings.forEach(h => {
+    function getTableRows(accountItems, totalPortfolioValue) {
+      return accountItems.map(h => {
         const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
         const value = num(h.qty) * num(h.price);
         const profit = value - num(h.buy);
         const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
-        const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
+        const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
         const yearlyDividend = value * (num(h.dividendYield) / 100);
         const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>
-            <select onchange="updateField(${h.id}, 'account', this.value)">
-              <option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option>
-              <option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option>
-              <option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option>
-            </select>
-          </td>
-          <td>
-            <select onchange="updateField(${h.id}, 'assetType', this.value)">
-              <option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option>
-              <option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option>
-              <option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option>
-              <option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option>
-              <option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option>
-            </select>
-          </td>
-          <td><input value="${h.name || ""}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
-          <td><input value="${h.ticker || ""}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
-          <td><input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
-          <td><input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
-          <td>${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
-          <td><input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
-          <td>${won(value)}</td>
-          <td class="${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
-          <td class="${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
-          <td>${pct(weight)}</td>
-          <td><input type="number" step="any" value="${h.dividendYield || 0}" onchange="updateField(${h.id}, 'dividendYield', this.value)" /></td>
-          <td>${won(yearlyDividend)}</td>
-          <td><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
-          <td><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
+        return `
+          <tr>
+            <td>
+              <select onchange="updateField(${h.id}, 'account', this.value)">
+                <option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option>
+                <option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option>
+                <option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option>
+              </select>
+            </td>
+            <td>
+              <select onchange="updateField(${h.id}, 'assetType', this.value)">
+                <option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option>
+                <option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option>
+                <option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option>
+                <option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option>
+                <option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option>
+              </select>
+            </td>
+            <td><input value="${h.name || ""}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
+            <td><input value="${h.ticker || ""}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
+            <td><input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
+            <td><input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
+            <td>${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
+            <td><input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
+            <td>${won(value)}</td>
+            <td class="${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
+            <td class="${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
+            <td>${pct(weight)}</td>
+            <td><input type="number" step="any" value="${h.dividendYield || 0}" onchange="updateField(${h.id}, 'dividendYield', this.value)" /></td>
+            <td>${won(yearlyDividend)}</td>
+            <td><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
+            <td><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
+          </tr>
         `;
-        body.appendChild(tr);
-      });
+      }).join("");
+    }
+
+    function renderHoldingsSections() {
+      const container = document.getElementById("holdingsSections");
+      const totalPortfolioValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+
+      const sections = [
+        { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
+        { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
+        { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }
+      ];
+
+      container.innerHTML = sections.map(section => {
+        const rows = getTableRows(section.items, totalPortfolioValue);
+        return `
+          <div class="account-section">
+            <div class="account-section-title">${section.title}</div>
+            ${
+              section.items.length === 0
+                ? `<div class="empty-text">등록된 종목이 없어.</div>`
+                : `
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>계좌</th>
+                        <th>자산군</th>
+                        <th>종목명</th>
+                        <th>티커</th>
+                        <th>수량</th>
+                        <th>총 매입금</th>
+                        <th>평균단가</th>
+                        <th>현재가</th>
+                        <th>평가금</th>
+                        <th>손익</th>
+                        <th>수익률</th>
+                        <th>보유비중</th>
+                        <th>배당률%</th>
+                        <th>연배당</th>
+                        <th>가격갱신</th>
+                        <th>삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>
+                `
+            }
+          </div>
+        `;
+      }).join("");
     }
 
     function renderChart() {
@@ -904,7 +961,7 @@
     function render() {
       renderSummary();
       renderAccountSummary();
-      renderTable();
+      renderHoldingsSections();
       renderChart();
       renderRebalance();
       renderDividendSummary();
