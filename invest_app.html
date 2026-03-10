@@ -8,13 +8,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
-    .chart-box {
-  width: 100%;
-  max-width: 220px;
-  height: 220px;
-  margin: 0 auto;
-  position: relative;
-}
 
     body {
       margin: 0;
@@ -133,8 +126,7 @@
       gap: 12px;
     }
 
-    .summary .item,
-    .subsummary .item {
+    .summary .item {
       background: #f8faff;
       border: 1px solid #e3ebff;
       border-radius: 14px;
@@ -142,20 +134,71 @@
       min-width: 0;
     }
 
-    .summary .title,
-    .subsummary .title {
+    .summary .title {
       font-size: 13px;
       color: #667085;
       margin-bottom: 8px;
       font-weight: 700;
     }
 
-    .summary .value,
-    .subsummary .value {
+    .summary .value {
       font-size: clamp(18px, 2vw, 24px);
       font-weight: 800;
       line-height: 1.25;
       white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .account-summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .account-summary-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      background: #fcfdff;
+    }
+
+    .account-summary-name {
+      font-size: 18px;
+      font-weight: 800;
+      padding-top: 10px;
+    }
+
+    .account-summary-values {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .account-summary-values .item {
+      background: #f8faff;
+      border: 1px solid #e3ebff;
+      border-radius: 14px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .account-summary-values .title {
+      font-size: 13px;
+      color: #667085;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .account-summary-values .value {
+      font-size: clamp(18px, 2vw, 30px);
+      font-weight: 800;
+      line-height: 1.25;
       word-break: keep-all;
       overflow-wrap: anywhere;
       font-variant-numeric: tabular-nums;
@@ -168,7 +211,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1860px;
+      min-width: 1900px;
       table-layout: auto;
     }
 
@@ -196,6 +239,18 @@
       white-space: nowrap;
     }
 
+    td.account-cell,
+    th.account-cell {
+      min-width: 92px;
+      width: 92px;
+    }
+
+    td.asset-cell,
+    th.asset-cell {
+      min-width: 86px;
+      width: 86px;
+    }
+
     td.name-cell,
     th.name-cell {
       min-width: 240px;
@@ -212,18 +267,6 @@
     th.qty-cell {
       min-width: 72px;
       width: 72px;
-    }
-
-    td.account-cell,
-    th.account-cell {
-      min-width: 92px;
-      width: 92px;
-    }
-
-    td.asset-cell,
-    th.asset-cell {
-      min-width: 86px;
-      width: 86px;
     }
 
     td.cycle-cell,
@@ -314,8 +357,15 @@
       line-height: 1.35;
     }
 
-    .profit { color: #067647; font-weight: 700; }
-    .loss { color: #b42318; font-weight: 700; }
+    .profit {
+      color: #067647;
+      font-weight: 700;
+    }
+
+    .loss {
+      color: #b42318;
+      font-weight: 700;
+    }
 
     .two-col {
       display: grid;
@@ -380,58 +430,12 @@
       color: #667085;
     }
 
-    /* 계좌별 요약 - PC에서 세로 행 분리 */
-    .account-summary-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .account-summary-row {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 14px;
-      align-items: start;
-      padding: 14px;
-      border: 1px solid #e7eefc;
-      border-radius: 14px;
-      background: #fcfdff;
-    }
-
-    .account-summary-name {
-      font-size: 18px;
-      font-weight: 800;
-      padding-top: 10px;
-    }
-
-    .account-summary-values {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .account-summary-values .item {
-      background: #f8faff;
-      border: 1px solid #e3ebff;
-      border-radius: 14px;
-      padding: 14px;
-      min-width: 0;
-    }
-
-    .account-summary-values .title {
-      font-size: 13px;
-      color: #667085;
-      margin-bottom: 8px;
-      font-weight: 700;
-    }
-
-    .account-summary-values .value {
-      font-size: clamp(18px, 2vw, 30px);
-      font-weight: 800;
-      line-height: 1.25;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      font-variant-numeric: tabular-nums;
+    .chart-box {
+      width: 100%;
+      max-width: 220px;
+      height: 220px;
+      margin: 0 auto;
+      position: relative;
     }
 
     @media (max-width: 1100px) {
@@ -441,19 +445,29 @@
     }
 
     @media (max-width: 900px) {
-      .grid, .grid-5, .grid-4, .summary, .two-col, .grid-2 {
+      .grid,
+      .grid-5,
+      .grid-4,
+      .summary,
+      .two-col,
+      .grid-2 {
         grid-template-columns: 1fr;
       }
 
-      h1 { font-size: 28px; }
-      .btn-row button { width: 100%; }
+      h1 {
+        font-size: 28px;
+      }
 
-      td.name-cell input {
-        min-width: 220px;
+      .btn-row button {
+        width: 100%;
       }
 
       table {
-        min-width: 1820px;
+        min-width: 1860px;
+      }
+
+      td.name-cell input {
+        min-width: 220px;
       }
 
       .account-summary-row {
@@ -524,7 +538,7 @@
 
       <div class="help-box">
         배당 입력 방식<br>
-        1) 월/분기/반기/연배당이면 <strong>배당주기</strong>와 <strong>1회 주당 배당금</strong>을 입력<br>
+        1) 월/분기/반기/연배당이면 <strong>배당주기</strong>와 <strong>1회 주당 배당금</strong> 입력<br>
         2) 올해 일부 분기만 받는 경우는 <strong>직접입력</strong> 선택 후 <strong>올해예상주당배당</strong> 입력<br>
         예: TIGER 200 총 14,960원 / 22주 = 680원 → 직접입력 + 680
       </div>
@@ -612,8 +626,8 @@
         <h2>자산 비중</h2>
         <div class="chart-box">
           <canvas id="assetChart"></canvas>
+        </div>
       </div>
-    </div>   
 
       <div class="card">
         <h2>리밸런싱</h2>
@@ -672,19 +686,19 @@
     <div class="card">
       <h2>배당 요약</h2>
       <div class="grid-4">
-        <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
+        <div class="item">
           <div class="title">올해 예상 배당금</div>
           <div class="value" id="dividendYear">0원</div>
         </div>
-        <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
+        <div class="item">
           <div class="title">월 환산 예상금</div>
           <div class="value" id="dividendMonth">0원</div>
         </div>
-        <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
+        <div class="item">
           <div class="title">배당 입력 종목 수</div>
           <div class="value" id="dividendCount">0개</div>
         </div>
-        <div class="item" style="background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:14px;">
+        <div class="item">
           <div class="title">배당 평가금 기준</div>
           <div class="value" id="dividendBase">0원</div>
         </div>
@@ -798,7 +812,7 @@
     }
 
     function isManualGold(item) {
-      return item.account === "금현물계좌" || item.ticker === "KRX-GOLD";
+      return item.account === "금현물계좌" || (item.ticker || "").toUpperCase() === "KRX-GOLD";
     }
 
     function getCycleCount(cycle) {
@@ -843,6 +857,9 @@
         .select("*")
         .order("id", { ascending: true });
 
+      console.log("Supabase data:", data);
+      console.log("Supabase error:", error);
+
       if (error) {
         alert("초기 불러오기 실패: " + error.message);
         console.error(error);
@@ -851,12 +868,17 @@
 
       holdings = (data || []).map(h => ({
         ...h,
+        qty: Number(h.qty ?? 0),
+        buy: Number(h.buy ?? 0),
+        price: Number(h.price ?? 0),
         expectedDividendPerShare: Number(h.expectedDividendPerShare ?? 0),
         dividendYield: Number(h.dividendYield ?? 0),
         dividendCycle: h.dividendCycle ?? "직접입력",
         dividendPerPayment: Number(h.dividendPerPayment ?? 0),
         assetType: classifyAsset(h.name, h.ticker, h.account)
       }));
+
+      console.log("Mapped holdings:", holdings);
 
       applySavedTargetsToInputs();
       render();
@@ -875,7 +897,7 @@
         return;
       }
 
-      if (!price && ticker && account !== "금현물계좌" && ticker !== "KRX-GOLD") {
+      if (!price && ticker && account !== "금현물계좌" && ticker.toUpperCase() !== "KRX-GOLD") {
         price = await fetchPriceFromWorker(ticker);
       }
 
@@ -905,15 +927,17 @@
       }
 
       if (data && data.length > 0) {
-        const inserted = {
+        holdings.push({
           ...data[0],
+          qty: Number(data[0].qty ?? 0),
+          buy: Number(data[0].buy ?? 0),
+          price: Number(data[0].price ?? 0),
           expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0),
           dividendYield: Number(data[0].dividendYield ?? 0),
           dividendCycle: data[0].dividendCycle ?? "직접입력",
           dividendPerPayment: Number(data[0].dividendPerPayment ?? 0),
           assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account)
-        };
-        holdings.push(inserted);
+        });
       }
 
       document.getElementById("name").value = "";
@@ -959,13 +983,13 @@
         assetType: item.assetType,
         name: item.name,
         ticker: item.ticker,
-        qty: item.qty,
-        buy: item.buy,
-        price: item.price,
-        expectedDividendPerShare: item.expectedDividendPerShare || 0,
-        dividendYield: item.dividendYield || 0,
+        qty: num(item.qty),
+        buy: num(item.buy),
+        price: num(item.price),
+        expectedDividendPerShare: num(item.expectedDividendPerShare),
+        dividendYield: num(item.dividendYield),
         dividendCycle: item.dividendCycle || "직접입력",
-        dividendPerPayment: item.dividendPerPayment || 0
+        dividendPerPayment: num(item.dividendPerPayment)
       };
 
       const { error } = await db
@@ -1151,14 +1175,14 @@
               />
             </td>
             <td class="qty-cell">
-              <input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" />
+              <input type="number" step="any" value="${num(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" />
             </td>
             <td class="buy-cell num">
-              <input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" />
+              <input type="number" step="any" value="${num(h.buy)}" onchange="updateField(${h.id}, 'buy', this.value)" />
             </td>
             <td class="avg-cell num">${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
             <td class="price-cell num">
-              <input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" />
+              <input type="number" step="any" value="${num(h.price)}" onchange="updateField(${h.id}, 'price', this.value)" />
             </td>
             <td class="value-cell num">${won(value)}</td>
             <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
@@ -1177,7 +1201,7 @@
               <input
                 type="number"
                 step="any"
-                value="${dividendPerPayment || 0}"
+                value="${dividendPerPayment}"
                 title="1회 주당 배당금(원)"
                 onchange="updateField(${h.id}, 'dividendPerPayment', this.value)"
               />
@@ -1186,7 +1210,7 @@
               <input
                 type="number"
                 step="any"
-                value="${num(h.expectedDividendPerShare) || 0}"
+                value="${num(h.expectedDividendPerShare)}"
                 title="올해 예상 주당 배당금(원) - 직접입력용"
                 onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)"
               />
@@ -1195,8 +1219,12 @@
               ${won(yearlyDividend)}<br>
               <span class="muted">${pct(derivedDividendYield)}</span>
             </td>
-            <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
-            <td class="action-cell"><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
+            <td class="action-cell">
+              <button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button>
+            </td>
+            <td class="action-cell">
+              <button class="danger" onclick="deleteHolding(${h.id})">삭제</button>
+            </td>
           </tr>
         `;
       }).join("");
@@ -1222,33 +1250,33 @@
               section.items.length === 0
                 ? `<div class="empty-text">등록된 종목이 없어.</div>`
                 : `
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th class="account-cell">계좌</th>
-                        <th class="asset-cell">자산군</th>
-                        <th class="name-cell">종목명</th>
-                        <th class="ticker-cell">티커</th>
-                        <th class="qty-cell">수량</th>
-                        <th class="buy-cell num">총 매입금</th>
-                        <th class="avg-cell num">평균단가</th>
-                        <th class="price-cell num">현재가</th>
-                        <th class="value-cell num">평가금</th>
-                        <th class="profit-cell num">손익</th>
-                        <th class="rate-cell num">수익률</th>
-                        <th class="weight-cell num">보유비중</th>
-                        <th class="cycle-cell">배당주기</th>
-                        <th class="dividend-per-payment-cell num">1회주당배당</th>
-                        <th class="dividend-input-cell num">올해예상주당배당</th>
-                        <th class="dividend-value-cell num">예상배당 / 수익률</th>
-                        <th class="action-cell">가격갱신</th>
-                        <th class="action-cell">삭제</th>
-                      </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th class="account-cell">계좌</th>
+                          <th class="asset-cell">자산군</th>
+                          <th class="name-cell">종목명</th>
+                          <th class="ticker-cell">티커</th>
+                          <th class="qty-cell">수량</th>
+                          <th class="buy-cell num">총 매입금</th>
+                          <th class="avg-cell num">평균단가</th>
+                          <th class="price-cell num">현재가</th>
+                          <th class="value-cell num">평가금</th>
+                          <th class="profit-cell num">손익</th>
+                          <th class="rate-cell num">수익률</th>
+                          <th class="weight-cell num">보유비중</th>
+                          <th class="cycle-cell">배당주기</th>
+                          <th class="dividend-per-payment-cell num">1회주당배당</th>
+                          <th class="dividend-input-cell num">올해예상주당배당</th>
+                          <th class="dividend-value-cell num">예상배당 / 수익률</th>
+                          <th class="action-cell">가격갱신</th>
+                          <th class="action-cell">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody>${rows}</tbody>
+                    </table>
+                  </div>
                 `
             }
           </div>
@@ -1271,24 +1299,25 @@
       if (assetChart) assetChart.destroy();
 
       assetChart = new Chart(ctx, {
-  type: "pie",
-  data: {
-    labels,
-    datasets: [{ data }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-      padding: 8
-    },
-    plugins: {
-      legend: {
-        position: "bottom"
-      }
+        type: "pie",
+        data: {
+          labels,
+          datasets: [{ data }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: 8
+          },
+          plugins: {
+            legend: {
+              position: "bottom"
+            }
+          }
+        }
+      });
     }
-  }
-});
 
     function applySavedTargetsToInputs() {
       document.getElementById("targetStock").value = targets.stock ?? 60;
@@ -1410,7 +1439,9 @@
         },
         options: {
           responsive: true,
-          plugins: { legend: { display: true } }
+          plugins: {
+            legend: { display: true }
+          }
         }
       });
     }
@@ -1433,4 +1464,3 @@
   </script>
 </body>
 </html>
-
