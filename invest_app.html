@@ -8,6 +8,13 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
+    .chart-box {
+  width: 100%;
+  max-width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  position: relative;
+}
 
     body {
       margin: 0;
@@ -603,8 +610,10 @@
     <div class="two-col">
       <div class="card">
         <h2>자산 비중</h2>
-        <canvas id="assetChart"></canvas>
+        <div class="chart-box">
+          <canvas id="assetChart"></canvas>
       </div>
+    </div>   
 
       <div class="card">
         <h2>리밸런싱</h2>
@@ -1262,11 +1271,24 @@
       if (assetChart) assetChart.destroy();
 
       assetChart = new Chart(ctx, {
-        type: "pie",
-        data: { labels, datasets: [{ data }] },
-        options: { plugins: { legend: { position: "bottom" } } }
-      });
+  type: "pie",
+  data: {
+    labels,
+    datasets: [{ data }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: 8
+    },
+    plugins: {
+      legend: {
+        position: "bottom"
+      }
     }
+  }
+});
 
     function applySavedTargetsToInputs() {
       document.getElementById("targetStock").value = targets.stock ?? 60;
@@ -1411,3 +1433,4 @@
   </script>
 </body>
 </html>
+
