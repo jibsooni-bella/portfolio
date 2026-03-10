@@ -8,30 +8,36 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f5f7fb;
       color: #222;
     }
+
     .wrap {
       max-width: 1280px;
       margin: 0 auto;
       padding: 20px 14px 40px;
     }
+
     h1 {
       margin: 0 0 18px;
       font-size: 32px;
       font-weight: 800;
     }
+
     h2 {
       margin: 0 0 14px;
       font-size: 24px;
     }
+
     h3 {
       margin: 0 0 12px;
       font-size: 20px;
     }
+
     .card {
       background: #fff;
       border-radius: 16px;
@@ -39,31 +45,37 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.06);
       margin-bottom: 16px;
     }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
     }
+
     .grid-5 {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
+
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
     }
+
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
+
     label {
       display: block;
       font-size: 13px;
@@ -71,6 +83,7 @@
       margin-bottom: 6px;
       color: #555;
     }
+
     input, select, button {
       width: 100%;
       padding: 10px 12px;
@@ -79,6 +92,7 @@
       font-size: 14px;
       background: #fff;
     }
+
     button {
       cursor: pointer;
       font-weight: 700;
@@ -86,58 +100,72 @@
       background: #2f6fed;
       color: #fff;
     }
+
     button.secondary {
       background: #eef3ff;
       color: #2f6fed;
       border: 1px solid #cfdcff;
     }
+
     button.danger {
       background: #fce8e8;
       color: #b42318;
       border: 1px solid #f4c7c7;
     }
+
     .btn-row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       margin-top: 12px;
     }
+
     .btn-row button {
       width: auto;
       min-width: 120px;
     }
+
     .summary {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
     }
-    .summary .item, .subsummary .item {
+
+    .summary .item,
+    .subsummary .item {
       background: #f8faff;
       border: 1px solid #e3ebff;
       border-radius: 14px;
       padding: 14px;
       min-width: 0;
     }
-    .summary .title, .subsummary .title {
+
+    .summary .title,
+    .subsummary .title {
       font-size: 13px;
       color: #667085;
       margin-bottom: 8px;
       font-weight: 700;
     }
-    .summary .value, .subsummary .value {
+
+    .summary .value,
+    .subsummary .value {
       font-size: clamp(18px, 2vw, 24px);
       font-weight: 800;
       line-height: 1.25;
       white-space: normal;
       word-break: keep-all;
       overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums;
     }
+
     .subsummary {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin-top: 10px;
     }
+
     .account-block {
       background: #fcfdff;
       border: 1px solid #e7eefc;
@@ -145,55 +173,166 @@
       padding: 14px;
       min-width: 0;
     }
+
     .account-name {
       font-size: 18px;
       font-weight: 800;
       margin-bottom: 10px;
     }
+
     .table-wrap {
       overflow-x: auto;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1450px;
+      min-width: 1540px;
+      table-layout: auto;
     }
+
     th, td {
       border-bottom: 1px solid #eceff5;
       padding: 10px 8px;
       text-align: center;
       vertical-align: middle;
     }
+
     th {
       background: #f8fafc;
       font-size: 14px;
+      white-space: nowrap;
     }
+
     td input, td select {
-      min-width: 90px;
       padding: 8px 10px;
     }
+
+    td.num,
+    th.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    td.name-cell,
+    th.name-cell {
+      min-width: 240px;
+      width: 260px;
+    }
+
+    td.ticker-cell,
+    th.ticker-cell {
+      min-width: 92px;
+      width: 92px;
+    }
+
+    td.qty-cell,
+    th.qty-cell {
+      min-width: 72px;
+      width: 72px;
+    }
+
+    td.account-cell,
+    th.account-cell {
+      min-width: 92px;
+      width: 92px;
+    }
+
+    td.asset-cell,
+    th.asset-cell {
+      min-width: 86px;
+      width: 86px;
+    }
+
+    td.buy-cell,
+    th.buy-cell,
+    td.avg-cell,
+    th.avg-cell,
+    td.price-cell,
+    th.price-cell,
+    td.value-cell,
+    th.value-cell,
+    td.profit-cell,
+    th.profit-cell,
+    td.rate-cell,
+    th.rate-cell,
+    td.weight-cell,
+    th.weight-cell,
+    td.dividend-yield-cell,
+    th.dividend-yield-cell,
+    td.dividend-value-cell,
+    th.dividend-value-cell {
+      min-width: 92px;
+    }
+
+    td.action-cell,
+    th.action-cell {
+      min-width: 92px;
+      width: 92px;
+    }
+
+    td.name-cell input {
+      width: 100%;
+      min-width: 240px;
+      white-space: normal;
+      line-height: 1.3;
+    }
+
+    td.ticker-cell input {
+      width: 88px;
+      min-width: 88px;
+    }
+
+    td.qty-cell input {
+      width: 64px;
+      min-width: 64px;
+      text-align: right;
+    }
+
+    td.account-cell select {
+      width: 86px;
+      min-width: 86px;
+    }
+
+    td.asset-cell select {
+      width: 78px;
+      min-width: 78px;
+    }
+
+    td.buy-cell input,
+    td.price-cell input,
+    td.dividend-yield-cell input {
+      min-width: 88px;
+    }
+
     .profit { color: #067647; font-weight: 700; }
     .loss { color: #b42318; font-weight: 700; }
+
     .two-col {
       display: grid;
       grid-template-columns: 1.2fr 1fr;
       gap: 16px;
     }
+
     .notice {
       font-size: 13px;
       color: #667085;
       line-height: 1.5;
       margin-top: 8px;
     }
+
     .rebalance-box {
       line-height: 1.8;
       font-size: 15px;
     }
+
     .last-update {
       font-size: 13px;
       color: #667085;
       margin-top: 10px;
     }
+
     .help-box {
       margin-top: 10px;
       padding: 12px;
@@ -203,12 +342,15 @@
       font-size: 13px;
       line-height: 1.6;
     }
+
     .account-section {
       margin-bottom: 18px;
     }
+
     .account-section:last-child {
       margin-bottom: 0;
     }
+
     .account-section-title {
       font-size: 18px;
       font-weight: 800;
@@ -218,22 +360,35 @@
       background: #f8fafc;
       border: 1px solid #e7eefc;
     }
+
     .empty-text {
       color: #667085;
       font-size: 14px;
       padding: 8px 4px 0;
     }
+
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
       }
     }
+
     @media (max-width: 900px) {
       .grid, .grid-5, .grid-4, .summary, .two-col, .grid-2, .subsummary {
         grid-template-columns: 1fr;
       }
+
       h1 { font-size: 28px; }
+
       .btn-row button { width: 100%; }
+
+      td.name-cell input {
+        min-width: 220px;
+      }
+
+      table {
+        min-width: 1500px;
+      }
     }
   </style>
 </head>
@@ -385,7 +540,7 @@
             <thead>
               <tr>
                 <th>월</th>
-                <th>투자금</th>
+                <th class="num">투자금</th>
                 <th>삭제</th>
               </tr>
             </thead>
@@ -456,20 +611,77 @@
       return `${num(n).toFixed(2)}%`;
     }
 
+    function esc(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
     function setLastUpdateText() {
       const now = new Date();
       document.getElementById("lastUpdateText").textContent =
         "마지막 업데이트: " + now.toLocaleString("ko-KR");
     }
 
+    function normalizeText(value = "") {
+      return String(value).replace(/\s+/g, "").toLowerCase();
+    }
+
+    function hasAny(text, keywords) {
+      return keywords.some(keyword => text.includes(keyword));
+    }
+
     function classifyAsset(name = "", ticker = "", account = "") {
-      const text = `${name} ${ticker} ${account}`.toLowerCase();
-      if (text.includes("dollar") || text.includes("달러") || text.includes("sofr")) return "달러";
-      if (text.includes("리츠") || text.includes("reit") || text.includes("부동산")) return "리츠";
-      if (text.includes("채권") || text.includes("국채") || text.includes("bond") || text.includes("trf")) return "채권";
-      if (text.includes("금현물") || text.includes("krx금") || text.includes("gold") || text.includes("ace krx금현물") || text.includes("krx gold")) return "금";
+      const rawText = `${name} ${ticker}`.toLowerCase();
+      const text = normalizeText(`${name} ${ticker}`);
+
+      if (account === "금현물계좌") return "금";
+
+      const goldKeywords = [
+        "금현물",
+        "krx금현물",
+        "gold",
+        "골드",
+        "금선물",
+        "krxgold"
+      ];
+
+      const goldFalsePositives = [
+        "금리",
+        "예금",
+        "적금",
+        "입금",
+        "출금",
+        "송금",
+        "자금"
+      ];
+
+      if (!hasAny(text, goldFalsePositives) && hasAny(text, goldKeywords)) {
+        return "금";
+      }
+
+      if (hasAny(text, ["리츠", "reit", "부동산"])) return "리츠";
+
+      if (hasAny(text, [
+        "채권",
+        "국채",
+        "회사채",
+        "종합채권",
+        "중장기국채",
+        "단기채",
+        "mmf",
+        "sofr",
+        "bond",
+        "trf"
+      ])) {
+        return "채권";
+      }
+
+      if (hasAny(text, ["달러", "usd", "미국달러"])) return "달러";
+
       return "주식";
-      
     }
 
     function isManualGold(item) {
@@ -478,6 +690,7 @@
 
     async function fetchPriceFromWorker(ticker) {
       if (!ticker) return 0;
+
       try {
         const res = await fetch(`${WORKER_URL}?ticker=${encodeURIComponent(ticker)}`);
         const data = await res.json();
@@ -502,7 +715,8 @@
 
       holdings = (data || []).map(h => ({
         ...h,
-        dividendYield: h.dividendYield ?? 0
+        dividendYield: h.dividendYield ?? 0,
+        assetType: classifyAsset(h.name, h.ticker, h.account)
       }));
 
       applySavedTargetsToInputs();
@@ -528,7 +742,7 @@
 
       const item = {
         account,
-        assetType: classifyAsset(name, ticker),
+        assetType: classifyAsset(name, ticker, account),
         name,
         ticker,
         qty,
@@ -549,7 +763,12 @@
       }
 
       if (data && data.length > 0) {
-        holdings.push({ ...data[0], dividendYield: data[0].dividendYield ?? 0 });
+        const inserted = {
+          ...data[0],
+          dividendYield: data[0].dividendYield ?? 0,
+          assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account)
+        };
+        holdings.push(inserted);
       }
 
       document.getElementById("name").value = "";
@@ -564,11 +783,13 @@
 
     async function deleteHolding(id) {
       const { error } = await db.from("holdings").delete().eq("id", id);
+
       if (error) {
         alert("삭제 실패: " + error.message);
         console.error(error);
         return;
       }
+
       holdings = holdings.filter(h => h.id !== id);
       render();
     }
@@ -585,7 +806,7 @@
       item[field] = updateValue;
 
       if (field === "name" || field === "ticker" || field === "account") {
-        item.assetType = classifyAsset(item.name, item.ticker);
+        item.assetType = classifyAsset(item.name, item.ticker, item.account);
       }
 
       const updatePayload = {
@@ -658,6 +879,7 @@
           await db.from("holdings").update({ price: latest }).eq("id", h.id);
         }
       }
+
       setLastUpdateText();
       render();
       alert("ETF 가격 업데이트 완료!");
@@ -727,14 +949,14 @@
 
         return `
           <tr>
-            <td>
+            <td class="account-cell">
               <select onchange="updateField(${h.id}, 'account', this.value)">
                 <option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option>
                 <option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option>
                 <option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option>
               </select>
             </td>
-            <td>
+            <td class="asset-cell">
               <select onchange="updateField(${h.id}, 'assetType', this.value)">
                 <option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option>
                 <option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option>
@@ -743,20 +965,40 @@
                 <option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option>
               </select>
             </td>
-            <td><input value="${h.name || ""}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
-            <td><input value="${h.ticker || ""}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
-            <td><input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
-            <td><input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
-            <td>${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
-            <td><input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
-            <td>${won(value)}</td>
-            <td class="${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
-            <td class="${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
-            <td>${pct(weight)}</td>
-            <td><input type="number" step="any" value="${h.dividendYield || 0}" onchange="updateField(${h.id}, 'dividendYield', this.value)" /></td>
-            <td>${won(yearlyDividend)}</td>
-            <td><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
-            <td><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
+            <td class="name-cell">
+              <input
+                value="${esc(h.name)}"
+                title="${esc(h.name)}"
+                onchange="updateField(${h.id}, 'name', this.value)"
+              />
+            </td>
+            <td class="ticker-cell">
+              <input
+                value="${esc(h.ticker || "")}"
+                title="${esc(h.ticker || "")}"
+                onchange="updateField(${h.id}, 'ticker', this.value)"
+              />
+            </td>
+            <td class="qty-cell">
+              <input type="number" step="any" value="${h.qty || 0}" onchange="updateField(${h.id}, 'qty', this.value)" />
+            </td>
+            <td class="buy-cell num">
+              <input type="number" step="any" value="${h.buy || 0}" onchange="updateField(${h.id}, 'buy', this.value)" />
+            </td>
+            <td class="avg-cell num">${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
+            <td class="price-cell num">
+              <input type="number" step="any" value="${h.price || 0}" onchange="updateField(${h.id}, 'price', this.value)" />
+            </td>
+            <td class="value-cell num">${won(value)}</td>
+            <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
+            <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
+            <td class="weight-cell num">${pct(weight)}</td>
+            <td class="dividend-yield-cell num">
+              <input type="number" step="any" value="${h.dividendYield || 0}" onchange="updateField(${h.id}, 'dividendYield', this.value)" />
+            </td>
+            <td class="dividend-value-cell num">${won(yearlyDividend)}</td>
+            <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
+            <td class="action-cell"><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
           </tr>
         `;
       }).join("");
@@ -774,6 +1016,7 @@
 
       container.innerHTML = sections.map(section => {
         const rows = getTableRows(section.items, totalPortfolioValue);
+
         return `
           <div class="account-section">
             <div class="account-section-title">${section.title}</div>
@@ -785,22 +1028,22 @@
                   <table>
                     <thead>
                       <tr>
-                        <th>계좌</th>
-                        <th>자산군</th>
-                        <th>종목명</th>
-                        <th>티커</th>
-                        <th>수량</th>
-                        <th>총 매입금</th>
-                        <th>평균단가</th>
-                        <th>현재가</th>
-                        <th>평가금</th>
-                        <th>손익</th>
-                        <th>수익률</th>
-                        <th>보유비중</th>
-                        <th>배당률%</th>
-                        <th>연배당</th>
-                        <th>가격갱신</th>
-                        <th>삭제</th>
+                        <th class="account-cell">계좌</th>
+                        <th class="asset-cell">자산군</th>
+                        <th class="name-cell">종목명</th>
+                        <th class="ticker-cell">티커</th>
+                        <th class="qty-cell">수량</th>
+                        <th class="buy-cell num">총 매입금</th>
+                        <th class="avg-cell num">평균단가</th>
+                        <th class="price-cell num">현재가</th>
+                        <th class="value-cell num">평가금</th>
+                        <th class="profit-cell num">손익</th>
+                        <th class="rate-cell num">수익률</th>
+                        <th class="weight-cell num">보유비중</th>
+                        <th class="dividend-yield-cell num">배당률%</th>
+                        <th class="dividend-value-cell num">연배당</th>
+                        <th class="action-cell">가격갱신</th>
+                        <th class="action-cell">삭제</th>
                       </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -928,8 +1171,8 @@
       monthlyInvestments.forEach((item, index) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${item.month}</td>
-          <td>${won(item.amount)}</td>
+          <td>${esc(item.month)}</td>
+          <td class="num">${won(item.amount)}</td>
           <td><button class="danger" onclick="deleteMonthlyInvestment(${index})">삭제</button></td>
         `;
         body.appendChild(tr);
@@ -977,4 +1220,3 @@
   </script>
 </body>
 </html>
-
