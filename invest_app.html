@@ -33,11 +33,6 @@
       font-size: 24px;
     }
 
-    h3 {
-      margin: 0 0 12px;
-      font-size: 20px;
-    }
-
     .card {
       background: #fff;
       border-radius: 16px;
@@ -159,27 +154,6 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .subsummary {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .account-block {
-      background: #fcfdff;
-      border: 1px solid #e7eefc;
-      border-radius: 14px;
-      padding: 14px;
-      min-width: 0;
-    }
-
-    .account-name {
-      font-size: 18px;
-      font-weight: 800;
-      margin-bottom: 10px;
-    }
-
     .table-wrap {
       overflow-x: auto;
     }
@@ -187,7 +161,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1600px;
+      min-width: 1860px;
       table-layout: auto;
     }
 
@@ -245,6 +219,20 @@
       width: 86px;
     }
 
+    td.cycle-cell,
+    th.cycle-cell {
+      min-width: 110px;
+      width: 110px;
+    }
+
+    td.dividend-per-payment-cell,
+    th.dividend-per-payment-cell,
+    td.dividend-input-cell,
+    th.dividend-input-cell {
+      min-width: 110px;
+      width: 110px;
+    }
+
     td.buy-cell,
     th.buy-cell,
     td.avg-cell,
@@ -262,12 +250,6 @@
     td.dividend-value-cell,
     th.dividend-value-cell {
       min-width: 92px;
-    }
-
-    td.dividend-input-cell,
-    th.dividend-input-cell {
-      min-width: 110px;
-      width: 110px;
     }
 
     td.action-cell,
@@ -304,11 +286,17 @@
       min-width: 78px;
     }
 
+    td.cycle-cell select {
+      width: 104px;
+      min-width: 104px;
+    }
+
     td.buy-cell input,
     td.price-cell input {
       min-width: 88px;
     }
 
+    td.dividend-per-payment-cell input,
     td.dividend-input-cell input {
       min-width: 96px;
       width: 96px;
@@ -385,6 +373,60 @@
       color: #667085;
     }
 
+    /* 계좌별 요약 - PC에서 세로 행 분리 */
+    .account-summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .account-summary-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      background: #fcfdff;
+    }
+
+    .account-summary-name {
+      font-size: 18px;
+      font-weight: 800;
+      padding-top: 10px;
+    }
+
+    .account-summary-values {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .account-summary-values .item {
+      background: #f8faff;
+      border: 1px solid #e3ebff;
+      border-radius: 14px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .account-summary-values .title {
+      font-size: 13px;
+      color: #667085;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .account-summary-values .value {
+      font-size: clamp(18px, 2vw, 30px);
+      font-weight: 800;
+      line-height: 1.25;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums;
+    }
+
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
@@ -392,12 +434,11 @@
     }
 
     @media (max-width: 900px) {
-      .grid, .grid-5, .grid-4, .summary, .two-col, .grid-2, .subsummary {
+      .grid, .grid-5, .grid-4, .summary, .two-col, .grid-2 {
         grid-template-columns: 1fr;
       }
 
       h1 { font-size: 28px; }
-
       .btn-row button { width: 100%; }
 
       td.name-cell input {
@@ -405,7 +446,19 @@
       }
 
       table {
-        min-width: 1560px;
+        min-width: 1820px;
+      }
+
+      .account-summary-row {
+        grid-template-columns: 1fr;
+      }
+
+      .account-summary-name {
+        padding-top: 0;
+      }
+
+      .account-summary-values {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -464,8 +517,9 @@
 
       <div class="help-box">
         배당 입력 방식<br>
-        이제 배당은 <strong>배당률%</strong> 대신 <strong>올해 예상 주당 배당금(원)</strong>으로 입력해.<br>
-        예: 올해 총 예상 배당 14,960원 / 보유수량 22주 → 주당 680원 입력
+        1) 월/분기/반기/연배당이면 <strong>배당주기</strong>와 <strong>1회 주당 배당금</strong>을 입력<br>
+        2) 올해 일부 분기만 받는 경우는 <strong>직접입력</strong> 선택 후 <strong>올해예상주당배당</strong> 입력<br>
+        예: TIGER 200 총 14,960원 / 22주 = 680원 → 직접입력 + 680
       </div>
 
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
@@ -484,31 +538,58 @@
 
     <div class="card">
       <h2>계좌별 요약</h2>
-      <div class="grid-3">
-        <div class="account-block">
-          <div class="account-name">ISA</div>
-          <div class="subsummary">
-            <div class="item"><div class="title">평가금</div><div class="value" id="isaValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="isaProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="isaRate">0%</div></div>
+      <div class="account-summary-list">
+        <div class="account-summary-row">
+          <div class="account-summary-name">ISA</div>
+          <div class="account-summary-values">
+            <div class="item">
+              <div class="title">평가금</div>
+              <div class="value" id="isaValue">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">손익</div>
+              <div class="value" id="isaProfit">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">수익률</div>
+              <div class="value" id="isaRate">0%</div>
+            </div>
           </div>
         </div>
 
-        <div class="account-block">
-          <div class="account-name">연금저축</div>
-          <div class="subsummary">
-            <div class="item"><div class="title">평가금</div><div class="value" id="pensionValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="pensionProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="pensionRate">0%</div></div>
+        <div class="account-summary-row">
+          <div class="account-summary-name">연금저축</div>
+          <div class="account-summary-values">
+            <div class="item">
+              <div class="title">평가금</div>
+              <div class="value" id="pensionValue">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">손익</div>
+              <div class="value" id="pensionProfit">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">수익률</div>
+              <div class="value" id="pensionRate">0%</div>
+            </div>
           </div>
         </div>
 
-        <div class="account-block">
-          <div class="account-name">금현물계좌</div>
-          <div class="subsummary">
-            <div class="item"><div class="title">평가금</div><div class="value" id="goldValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="goldProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="goldRate">0%</div></div>
+        <div class="account-summary-row">
+          <div class="account-summary-name">금현물계좌</div>
+          <div class="account-summary-values">
+            <div class="item">
+              <div class="title">평가금</div>
+              <div class="value" id="goldValue">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">손익</div>
+              <div class="value" id="goldProfit">0원</div>
+            </div>
+            <div class="item">
+              <div class="title">수익률</div>
+              <div class="value" id="goldRate">0%</div>
+            </div>
           </div>
         </div>
       </div>
@@ -711,6 +792,29 @@
       return item.account === "금현물계좌" || item.ticker === "KRX-GOLD";
     }
 
+    function getCycleCount(cycle) {
+      const map = {
+        "월배당": 12,
+        "분기배당": 4,
+        "반기배당": 2,
+        "연배당": 1,
+        "직접입력": 0
+      };
+      return map[cycle] ?? 0;
+    }
+
+    function calcExpectedDividendPerShare(item) {
+      const direct = num(item.expectedDividendPerShare);
+      const cycle = item.dividendCycle || "직접입력";
+      const perPayment = num(item.dividendPerPayment);
+
+      if (cycle === "직접입력") {
+        return direct;
+      }
+
+      return perPayment * getCycleCount(cycle);
+    }
+
     async function fetchPriceFromWorker(ticker) {
       if (!ticker) return 0;
 
@@ -740,6 +844,8 @@
         ...h,
         expectedDividendPerShare: Number(h.expectedDividendPerShare ?? 0),
         dividendYield: Number(h.dividendYield ?? 0),
+        dividendCycle: h.dividendCycle ?? "직접입력",
+        dividendPerPayment: Number(h.dividendPerPayment ?? 0),
         assetType: classifyAsset(h.name, h.ticker, h.account)
       }));
 
@@ -773,7 +879,9 @@
         buy,
         price,
         expectedDividendPerShare: 0,
-        dividendYield: 0
+        dividendYield: 0,
+        dividendCycle: "직접입력",
+        dividendPerPayment: 0
       };
 
       const { data, error } = await db
@@ -792,6 +900,8 @@
           ...data[0],
           expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0),
           dividendYield: Number(data[0].dividendYield ?? 0),
+          dividendCycle: data[0].dividendCycle ?? "직접입력",
+          dividendPerPayment: Number(data[0].dividendPerPayment ?? 0),
           assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account)
         };
         holdings.push(inserted);
@@ -825,7 +935,7 @@
       if (!item) return;
 
       let updateValue = value;
-      if (["qty", "buy", "price", "dividendYield", "expectedDividendPerShare"].includes(field)) {
+      if (["qty", "buy", "price", "dividendYield", "expectedDividendPerShare", "dividendPerPayment"].includes(field)) {
         updateValue = num(value);
       }
 
@@ -844,7 +954,9 @@
         buy: item.buy,
         price: item.price,
         expectedDividendPerShare: item.expectedDividendPerShare || 0,
-        dividendYield: item.dividendYield || 0
+        dividendYield: item.dividendYield || 0,
+        dividendCycle: item.dividendCycle || "직접입력",
+        dividendPerPayment: item.dividendPerPayment || 0
       };
 
       const { error } = await db
@@ -952,12 +1064,14 @@
 
     function renderDividendSummary() {
       const dividendItems = holdings.filter(h =>
-        num(h.expectedDividendPerShare) > 0 || num(h.dividendYield) > 0
+        calcExpectedDividendPerShare(h) > 0 || num(h.dividendYield) > 0
       );
 
       const yearly = dividendItems.reduce((s, h) => {
-        if (num(h.expectedDividendPerShare) > 0) {
-          return s + num(h.qty) * num(h.expectedDividendPerShare);
+        const expectedPerShare = calcExpectedDividendPerShare(h);
+
+        if (expectedPerShare > 0) {
+          return s + num(h.qty) * expectedPerShare;
         }
 
         const value = num(h.qty) * num(h.price);
@@ -980,7 +1094,9 @@
         const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
 
-        const expectedDividendPerShare = num(h.expectedDividendPerShare);
+        const cycle = h.dividendCycle || "직접입력";
+        const dividendPerPayment = num(h.dividendPerPayment);
+        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
         const fallbackYield = num(h.dividendYield);
 
         const yearlyDividend = expectedDividendPerShare > 0
@@ -1039,12 +1155,30 @@
             <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
             <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
             <td class="weight-cell num">${pct(weight)}</td>
+            <td class="cycle-cell">
+              <select onchange="updateField(${h.id}, 'dividendCycle', this.value)">
+                <option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option>
+                <option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option>
+                <option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option>
+                <option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option>
+                <option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option>
+              </select>
+            </td>
+            <td class="dividend-per-payment-cell num">
+              <input
+                type="number"
+                step="any"
+                value="${dividendPerPayment || 0}"
+                title="1회 주당 배당금(원)"
+                onchange="updateField(${h.id}, 'dividendPerPayment', this.value)"
+              />
+            </td>
             <td class="dividend-input-cell num">
               <input
                 type="number"
                 step="any"
-                value="${expectedDividendPerShare || 0}"
-                title="올해 예상 주당 배당금(원)"
+                value="${num(h.expectedDividendPerShare) || 0}"
+                title="올해 예상 주당 배당금(원) - 직접입력용"
                 onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)"
               />
             </td>
@@ -1095,6 +1229,8 @@
                         <th class="profit-cell num">손익</th>
                         <th class="rate-cell num">수익률</th>
                         <th class="weight-cell num">보유비중</th>
+                        <th class="cycle-cell">배당주기</th>
+                        <th class="dividend-per-payment-cell num">1회주당배당</th>
                         <th class="dividend-input-cell num">올해예상주당배당</th>
                         <th class="dividend-value-cell num">예상배당 / 수익률</th>
                         <th class="action-cell">가격갱신</th>
