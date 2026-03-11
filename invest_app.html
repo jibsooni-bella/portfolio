@@ -8,31 +8,30 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f5f7fb;
       color: #222;
     }
-
     .wrap {
       max-width: 1280px;
       margin: 0 auto;
       padding: 20px 14px 40px;
     }
-
     h1 {
       margin: 0 0 18px;
       font-size: 32px;
       font-weight: 800;
     }
-
     h2 {
       margin: 0 0 14px;
       font-size: 24px;
     }
-
+    h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
     .card {
       background: #fff;
       border-radius: 16px;
@@ -40,37 +39,31 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.06);
       margin-bottom: 16px;
     }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
     }
-
     .grid-5 {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
     }
-
     .grid-4 {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
     }
-
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
-
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
-
     label {
       display: block;
       font-size: 13px;
@@ -78,7 +71,6 @@
       margin-bottom: 6px;
       color: #555;
     }
-
     input, select, button {
       width: 100%;
       padding: 10px 12px;
@@ -87,7 +79,6 @@
       font-size: 14px;
       background: #fff;
     }
-
     button {
       cursor: pointer;
       font-weight: 700;
@@ -95,37 +86,31 @@
       background: #2f6fed;
       color: #fff;
     }
-
     button.secondary {
       background: #eef3ff;
       color: #2f6fed;
       border: 1px solid #cfdcff;
     }
-
     button.danger {
       background: #fce8e8;
       color: #b42318;
       border: 1px solid #f4c7c7;
     }
-
     .btn-row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       margin-top: 12px;
     }
-
     .btn-row button {
       width: auto;
       min-width: 120px;
     }
-
     .summary {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
     }
-
     .summary .item {
       background: #f8faff;
       border: 1px solid #e3ebff;
@@ -133,14 +118,12 @@
       padding: 14px;
       min-width: 0;
     }
-
     .summary .title {
       font-size: 13px;
       color: #667085;
       margin-bottom: 8px;
       font-weight: 700;
     }
-
     .summary .value {
       font-size: clamp(18px, 2vw, 24px);
       font-weight: 800;
@@ -150,13 +133,11 @@
       overflow-wrap: anywhere;
       font-variant-numeric: tabular-nums;
     }
-
     .account-summary-list {
       display: flex;
       flex-direction: column;
       gap: 14px;
     }
-
     .account-summary-row {
       display: grid;
       grid-template-columns: 140px 1fr;
@@ -167,19 +148,16 @@
       border-radius: 14px;
       background: #fcfdff;
     }
-
     .account-summary-name {
       font-size: 18px;
       font-weight: 800;
       padding-top: 10px;
     }
-
     .account-summary-values {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
     }
-
     .account-summary-values .item {
       background: #f8faff;
       border: 1px solid #e3ebff;
@@ -187,14 +165,12 @@
       padding: 14px;
       min-width: 0;
     }
-
     .account-summary-values .title {
       font-size: 13px;
       color: #667085;
       margin-bottom: 8px;
       font-weight: 700;
     }
-
     .account-summary-values .value {
       font-size: clamp(18px, 2vw, 30px);
       font-weight: 800;
@@ -203,41 +179,34 @@
       overflow-wrap: anywhere;
       font-variant-numeric: tabular-nums;
     }
-
     .table-wrap {
       overflow-x: auto;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       min-width: 1900px;
       table-layout: auto;
     }
-
     th, td {
       border-bottom: 1px solid #eceff5;
       padding: 10px 8px;
       text-align: center;
       vertical-align: middle;
     }
-
     th {
       background: #f8fafc;
       font-size: 14px;
       white-space: nowrap;
     }
-
     td input, td select {
       padding: 8px 10px;
     }
-
     td.num, th.num {
       text-align: right;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
-
     td.account-cell, th.account-cell { min-width: 92px; width: 92px; }
     td.asset-cell, th.asset-cell { min-width: 86px; width: 86px; }
     td.name-cell, th.name-cell { min-width: 240px; width: 260px; }
@@ -246,7 +215,6 @@
     td.cycle-cell, th.cycle-cell { min-width: 110px; width: 110px; }
     td.dividend-per-payment-cell, th.dividend-per-payment-cell,
     td.dividend-input-cell, th.dividend-input-cell { min-width: 110px; width: 110px; }
-
     td.buy-cell, th.buy-cell,
     td.avg-cell, th.avg-cell,
     td.price-cell, th.price-cell,
@@ -257,74 +225,61 @@
     td.dividend-value-cell, th.dividend-value-cell {
       min-width: 92px;
     }
-
     td.action-cell, th.action-cell { min-width: 92px; width: 92px; }
-
     td.name-cell input {
       width: 100%;
       min-width: 240px;
       white-space: normal;
       line-height: 1.3;
     }
-
     td.ticker-cell input {
       width: 88px;
       min-width: 88px;
     }
-
     td.qty-cell input {
       width: 64px;
       min-width: 64px;
       text-align: right;
     }
-
     td.account-cell select { width: 86px; min-width: 86px; }
     td.asset-cell select { width: 78px; min-width: 78px; }
     td.cycle-cell select { width: 104px; min-width: 104px; }
-
     td.buy-cell input,
     td.price-cell input {
       min-width: 88px;
     }
-
     td.dividend-per-payment-cell input,
     td.dividend-input-cell input {
       min-width: 96px;
       width: 96px;
       text-align: right;
     }
-
     td.dividend-value-cell {
       line-height: 1.35;
     }
-
     .profit { color: #067647; font-weight: 700; }
     .loss { color: #b42318; font-weight: 700; }
-
     .two-col {
       display: grid;
       grid-template-columns: 1.2fr 1fr;
       gap: 16px;
     }
-
     .notice {
       font-size: 13px;
       color: #667085;
       line-height: 1.5;
       margin-top: 8px;
     }
-
     .rebalance-box {
       line-height: 1.8;
       font-size: 15px;
+      min-height: 120px;
     }
-
     .last-update {
       font-size: 13px;
       color: #667085;
       margin-top: 10px;
     }
-
     .help-box {
       margin-top: 10px;
       padding: 12px;
@@ -334,15 +289,12 @@
       font-size: 13px;
       line-height: 1.6;
     }
-
     .account-section {
       margin-bottom: 18px;
     }
-
     .account-section:last-child {
       margin-bottom: 0;
     }
-
     .account-section-title {
       font-size: 18px;
       font-weight: 800;
@@ -352,18 +304,15 @@
       background: #f8fafc;
       border: 1px solid #e7eefc;
     }
-
     .empty-text {
       color: #667085;
       font-size: 14px;
       padding: 8px 4px 0;
     }
-
     .muted {
       font-size: 12px;
       color: #667085;
     }
-
     .chart-box {
       width: 100%;
       max-width: 220px;
@@ -371,7 +320,6 @@
       margin: 0 auto;
       position: relative;
     }
-
     .section-head {
       display: flex;
       justify-content: space-between;
@@ -380,45 +328,41 @@
       margin-bottom: 10px;
       flex-wrap: wrap;
     }
-
     .section-head h2 {
       margin: 0;
     }
-
     .section-meta {
       font-size: 13px;
       color: #667085;
     }
-
     .holdings-toggle-row {
       justify-content: center;
     }
-
     .holdings-toggle-btn {
       min-width: 220px;
     }
-
     .sortable {
       cursor: pointer;
       user-select: none;
     }
-
     .sortable:hover {
       background: #eef3ff;
     }
-
     .sort-indicator {
       margin-left: 4px;
       color: #2f6fed;
       font-size: 12px;
     }
-
+    .account-panel-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 0 12px;
+    }
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
       }
     }
-
     @media (max-width: 900px) {
       .grid,
       .grid-5,
@@ -428,31 +372,24 @@
       .grid-2 {
         grid-template-columns: 1fr;
       }
-
       h1 {
         font-size: 28px;
       }
-
       .btn-row button {
         width: 100%;
       }
-
       table {
         min-width: 1860px;
       }
-
       td.name-cell input {
         min-width: 220px;
       }
-
       .account-summary-row {
         grid-template-columns: 1fr;
       }
-
       .account-summary-name {
         padding-top: 0;
       }
-
       .account-summary-values {
         grid-template-columns: 1fr;
       }
@@ -512,15 +449,9 @@
       </div>
 
       <div class="help-box">
-        배당 입력 방식<br>
-        1) 월/분기/반기/연배당이면 <strong>배당주기</strong>와 <strong>1회 주당 배당금</strong> 입력<br>
-        2) 올해 일부 분기만 받는 경우는 <strong>직접입력</strong> 선택 후 <strong>올해예상주당배당</strong> 입력
-      </div>
-
-      <div class="help-box">
         거래기록 사용법<br>
         기존 보유종목 추가매수라면 <strong>티커는 비워도 돼.</strong><br>
-        앱이 같은 계좌의 같은 종목명을 찾아 티커를 자동으로 채워서 반영해.
+        거래기록 추가/삭제 시 <strong>보유종목 + 월별 투자기록</strong>에도 자동 반영돼.
       </div>
 
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
@@ -591,7 +522,8 @@
         </div>
         <div>
           <label for="txName">종목명</label>
-          <input id="txName" placeholder="예: TIGER 200" />
+          <input id="txName" list="txNameList" placeholder="기존 보유종목은 자동완성 가능" />
+          <datalist id="txNameList"></datalist>
         </div>
         <div>
           <label for="txTicker">티커</label>
@@ -613,11 +545,11 @@
       </div>
 
       <div class="btn-row">
-        <button onclick="addTransaction()">거래기록 추가 + 보유종목 자동반영</button>
+        <button onclick="addTransaction()">거래기록 추가 + 보유종목/월기록 자동반영</button>
       </div>
 
       <div class="notice">
-        신규 종목은 티커 입력이 필요하고, 기존 보유종목 추가매수는 종목명만 같으면 티커 없이도 반영돼.
+        종목명 입력칸에서 현재 계좌의 보유종목 자동완성이 떠. 선택하면 티커도 자동으로 채워져.
       </div>
     </div>
 
@@ -652,27 +584,51 @@
       </div>
     </div>
 
-    <div class="two-col">
+    <div class="grid-2">
       <div class="card">
-        <h2>자산 비중</h2>
+        <div class="account-panel-title">ISA 자산 비중</div>
         <div class="chart-box">
-          <canvas id="assetChart"></canvas>
+          <canvas id="isaAssetChart"></canvas>
         </div>
       </div>
 
       <div class="card">
-        <h2>리밸런싱</h2>
+        <div class="account-panel-title">ISA 리밸런싱</div>
         <div class="grid-5">
-          <div><label for="targetStock">주식 목표%</label><input id="targetStock" type="number" step="any" placeholder="예: 60" /></div>
-          <div><label for="targetBond">채권 목표%</label><input id="targetBond" type="number" step="any" placeholder="예: 20" /></div>
-          <div><label for="targetGold">금 목표%</label><input id="targetGold" type="number" step="any" placeholder="예: 10" /></div>
-          <div><label for="targetDollar">달러 목표%</label><input id="targetDollar" type="number" step="any" placeholder="예: 5" /></div>
-          <div><label for="targetREIT">리츠 목표%</label><input id="targetREIT" type="number" step="any" placeholder="예: 5" /></div>
+          <div><label for="isaTargetStock">주식 목표%</label><input id="isaTargetStock" type="number" step="any" /></div>
+          <div><label for="isaTargetBond">채권 목표%</label><input id="isaTargetBond" type="number" step="any" /></div>
+          <div><label for="isaTargetGold">금 목표%</label><input id="isaTargetGold" type="number" step="any" /></div>
+          <div><label for="isaTargetDollar">달러 목표%</label><input id="isaTargetDollar" type="number" step="any" /></div>
+          <div><label for="isaTargetREIT">리츠 목표%</label><input id="isaTargetREIT" type="number" step="any" /></div>
         </div>
         <div class="btn-row">
-          <button onclick="saveTargetsAndRender()">목표 저장 / 계산</button>
+          <button onclick="saveTargetsAndRender('ISA')">ISA 목표 저장 / 계산</button>
         </div>
-        <div id="rebalanceResult" class="rebalance-box"></div>
+        <div id="isaRebalanceResult" class="rebalance-box"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="account-panel-title">연금저축 자산 비중</div>
+        <div class="chart-box">
+          <canvas id="pensionAssetChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="account-panel-title">연금저축 리밸런싱</div>
+        <div class="grid-5">
+          <div><label for="pensionTargetStock">주식 목표%</label><input id="pensionTargetStock" type="number" step="any" /></div>
+          <div><label for="pensionTargetBond">채권 목표%</label><input id="pensionTargetBond" type="number" step="any" /></div>
+          <div><label for="pensionTargetGold">금 목표%</label><input id="pensionTargetGold" type="number" step="any" /></div>
+          <div><label for="pensionTargetDollar">달러 목표%</label><input id="pensionTargetDollar" type="number" step="any" /></div>
+          <div><label for="pensionTargetREIT">리츠 목표%</label><input id="pensionTargetREIT" type="number" step="any" /></div>
+        </div>
+        <div class="btn-row">
+          <button onclick="saveTargetsAndRender('연금저축')">연금저축 목표 저장 / 계산</button>
+        </div>
+        <div id="pensionRebalanceResult" class="rebalance-box"></div>
       </div>
     </div>
 
@@ -692,6 +648,10 @@
             <label>&nbsp;</label>
             <button onclick="addMonthlyInvestment()">기록 추가</button>
           </div>
+        </div>
+
+        <div class="notice">
+          거래기록 추가/삭제 시에도 해당 월 투자금이 자동 반영돼.
         </div>
 
         <div class="table-wrap" style="margin-top:12px;">
@@ -748,7 +708,8 @@
     let holdings = [];
     let transactions = [];
     let showAllTransactions = false;
-    let assetChart = null;
+    let isaAssetChart = null;
+    let pensionAssetChart = null;
     let monthlyChart = null;
 
     let expandedAccounts = {
@@ -767,12 +728,9 @@
     const EPSILON = 0.000001;
 
     let monthlyInvestments = JSON.parse(localStorage.getItem("portfolio_monthly_investments_v1") || "[]");
-    let targets = JSON.parse(localStorage.getItem("portfolio_targets_v1") || `{
-      "stock": 60,
-      "bond": 20,
-      "gold": 10,
-      "dollar": 5,
-      "reit": 5
+    let accountTargets = JSON.parse(localStorage.getItem("portfolio_account_targets_v1") || `{
+      "ISA": { "stock": 60, "bond": 20, "gold": 10, "dollar": 5, "reit": 5 },
+      "연금저축": { "stock": 60, "bond": 20, "gold": 10, "dollar": 5, "reit": 5 }
     }`);
 
     function won(n) {
@@ -814,6 +772,42 @@
 
     function hasAny(text, keywords) {
       return keywords.some(keyword => text.includes(keyword));
+    }
+
+    function monthKeyFromDate(dateStr = "") {
+      return String(dateStr).slice(0, 7);
+    }
+
+    function saveMonthlyInvestments() {
+      localStorage.setItem("portfolio_monthly_investments_v1", JSON.stringify(monthlyInvestments));
+    }
+
+    function addOrUpdateMonthlyInvestment(month, deltaAmount) {
+      if (!month) return;
+
+      const delta = num(deltaAmount);
+      const idx = monthlyInvestments.findIndex(item => item.month === month);
+
+      if (idx >= 0) {
+        monthlyInvestments[idx].amount = num(monthlyInvestments[idx].amount) + delta;
+        if (monthlyInvestments[idx].amount <= EPSILON) {
+          monthlyInvestments.splice(idx, 1);
+        }
+      } else if (delta > 0) {
+        monthlyInvestments.push({ month, amount: delta });
+      }
+
+      monthlyInvestments = monthlyInvestments
+        .filter(item => num(item.amount) > EPSILON)
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      saveMonthlyInvestments();
+    }
+
+    function syncMonthlyInvestmentFromTransaction(tx, sign = 1) {
+      const month = monthKeyFromDate(tx.trade_date);
+      const amount = num(tx.total_amount) * sign;
+      addOrUpdateMonthlyInvestment(month, amount);
     }
 
     function classifyAsset(name = "", ticker = "", account = "") {
@@ -890,18 +884,7 @@
       const rate = buy > 0 ? (profit / buy) * 100 : 0;
       const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
       const avg = qty > 0 ? buy / qty : 0;
-
-      const map = {
-        qty,
-        buy,
-        avg,
-        price,
-        value,
-        profit,
-        rate,
-        weight
-      };
-
+      const map = { qty, buy, avg, price, value, profit, rate, weight };
       return map[key] ?? value;
     }
 
@@ -915,7 +898,6 @@
 
         if (aValue < bValue) return -1 * direction;
         if (aValue > bValue) return 1 * direction;
-
         return normalizeText(a.name).localeCompare(normalizeText(b.name));
       });
     }
@@ -926,6 +908,39 @@
         h.account === account &&
         normalizeText(h.name) === targetName
       );
+    }
+
+    function updateTransactionNameSuggestions() {
+      const account = document.getElementById("txAccount").value;
+      const datalist = document.getElementById("txNameList");
+      const names = [...new Set(
+        holdings
+          .filter(h => h.account === account)
+          .map(h => h.name)
+      )].sort((a, b) => a.localeCompare(b, "ko"));
+
+      datalist.innerHTML = names.map(name => `<option value="${esc(name)}"></option>`).join("");
+    }
+
+    function autofillTransactionTickerFromName() {
+      const account = document.getElementById("txAccount").value;
+      const name = document.getElementById("txName").value.trim();
+      const tickerInput = document.getElementById("txTicker");
+      if (!name) return;
+
+      const matched = findHoldingByAccountAndName(account, name);
+      if (matched) {
+        tickerInput.value = matched.ticker || "";
+      }
+    }
+
+    function ensureAccountTargets() {
+      if (!accountTargets["ISA"]) {
+        accountTargets["ISA"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
+      }
+      if (!accountTargets["연금저축"]) {
+        accountTargets["연금저축"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
+      }
     }
 
     async function fetchPriceFromWorker(ticker) {
@@ -977,7 +992,9 @@
         total_amount: Number(t.total_amount ?? 0)
       }));
 
+      ensureAccountTargets();
       applySavedTargetsToInputs();
+      updateTransactionNameSuggestions();
       setDefaultTransactionDate();
       render();
     }
@@ -1090,13 +1107,11 @@
         };
 
         const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-
         if (error) {
           alert("보유종목 자동반영 실패: " + error.message);
           console.error(error);
           return false;
         }
-
         return true;
       }
 
@@ -1115,7 +1130,6 @@
       };
 
       const { data, error } = await db.from("holdings").insert([newHolding]).select();
-
       if (error) {
         alert("보유종목 자동생성 실패: " + error.message);
         console.error(error);
@@ -1152,17 +1166,14 @@
         alert("거래일을 입력해줘.");
         return;
       }
-
       if (!name) {
         alert("종목명을 입력해줘.");
         return;
       }
-
       if (quantity <= 0) {
         alert("수량을 0보다 크게 입력해줘.");
         return;
       }
-
       if (unit_price <= 0) {
         alert("1주 단가를 0보다 크게 입력해줘.");
         return;
@@ -1195,7 +1206,6 @@
       };
 
       const { data, error } = await db.from("transactions").insert([tx]).select();
-
       if (error) {
         alert("거래기록 저장 실패: " + error.message);
         console.error(error);
@@ -1214,6 +1224,8 @@
 
         const synced = await upsertHoldingFromTransaction(inserted);
         if (!synced) return;
+
+        syncMonthlyInvestmentFromTransaction(inserted, 1);
       }
 
       document.getElementById("txName").value = "";
@@ -1222,6 +1234,7 @@
       document.getElementById("txUnitPrice").value = "";
       document.getElementById("txMemo").value = "";
 
+      updateTransactionNameSuggestions();
       setDefaultTransactionDate();
       setLastUpdateText();
       render();
@@ -1242,7 +1255,6 @@
           console.error(error);
           return false;
         }
-
         holdings = holdings.filter(h => h.id !== item.id);
         return true;
       }
@@ -1265,7 +1277,6 @@
       };
 
       const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-
       if (error) {
         alert("보유종목 자동차감 실패: " + error.message);
         console.error(error);
@@ -1277,13 +1288,11 @@
 
     async function deleteHolding(id) {
       const { error } = await db.from("holdings").delete().eq("id", id);
-
       if (error) {
         alert("삭제 실패: " + error.message);
         console.error(error);
         return;
       }
-
       holdings = holdings.filter(h => h.id !== id);
       render();
     }
@@ -1292,11 +1301,10 @@
       const tx = transactions.find(t => t.id === id);
       if (!tx) return;
 
-      const ok = confirm("이 거래기록을 삭제하면 그 거래분만 보유종목에서도 자동 차감돼.\n계속할까?");
+      const ok = confirm("이 거래기록을 삭제하면 그 거래분만 보유종목과 월별 투자기록에서도 자동 차감돼.\n계속할까?");
       if (!ok) return;
 
       const { error } = await db.from("transactions").delete().eq("id", id);
-
       if (error) {
         alert("거래기록 삭제 실패: " + error.message);
         console.error(error);
@@ -1307,6 +1315,8 @@
 
       const synced = await reverseHoldingFromTransaction(tx);
       if (!synced) return;
+
+      syncMonthlyInvestmentFromTransaction(tx, -1);
 
       setLastUpdateText();
       render();
@@ -1342,7 +1352,6 @@
       };
 
       const { error } = await db.from("holdings").update(updatePayload).eq("id", id);
-
       if (error) {
         alert("수정 저장 실패: " + error.message);
         console.error(error);
@@ -1360,7 +1369,6 @@
         alert("금현물은 현재가(1g)를 직접 입력해줘.");
         return;
       }
-
       if (!item.ticker) return;
 
       const latest = await fetchPriceFromWorker(item.ticker);
@@ -1372,7 +1380,6 @@
       item.price = latest;
 
       const { error } = await db.from("holdings").update({ price: latest }).eq("id", item.id);
-
       if (error) {
         alert("가격 저장 실패: " + error.message);
         console.error(error);
@@ -1530,10 +1537,10 @@
               </select>
             </td>
             <td class="dividend-per-payment-cell num">
-              <input type="number" step="any" value="${dividendPerPayment}" title="1회 주당 배당금(원)" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" />
+              <input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" />
             </td>
             <td class="dividend-input-cell num">
-              <input type="number" step="any" value="${num(h.expectedDividendPerShare)}" title="올해 예상 주당 배당금(원) - 직접입력용" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" />
+              <input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" />
             </td>
             <td class="dividend-value-cell num">
               ${won(yearlyDividend)}<br>
@@ -1567,10 +1574,7 @@
       container.innerHTML = rawSections.map(section => {
         const sortedItems = sortHoldingsItems(section.items, section.title, totalPortfolioValue);
         const isExpanded = expandedAccounts[section.title];
-        const visibleItems = isExpanded
-          ? sortedItems
-          : sortedItems.slice(0, HOLDINGS_PREVIEW_COUNT);
-
+        const visibleItems = isExpanded ? sortedItems : sortedItems.slice(0, HOLDINGS_PREVIEW_COUNT);
         const rows = getTableRows(visibleItems, totalPortfolioValue);
         const hiddenCount = Math.max(sortedItems.length - HOLDINGS_PREVIEW_COUNT, 0);
 
@@ -1618,11 +1622,7 @@
                             class="secondary holdings-toggle-btn"
                             onclick="toggleAccountSection('${section.title}')"
                           >
-                            ${
-                              isExpanded
-                                ? `▲ ${section.title} 접기`
-                                : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`
-                            }
+                            ${isExpanded ? `▲ ${section.title} 접기` : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`}
                           </button>
                         </div>
                       `
@@ -1675,65 +1675,109 @@
       renderTransactions();
     }
 
-    function renderChart() {
+    function buildAssetTotals(items) {
       const totals = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
-
-      holdings.forEach(h => {
+      items.forEach(h => {
         const value = num(h.qty) * num(h.price);
         totals[h.assetType] = (totals[h.assetType] || 0) + value;
       });
+      return totals;
+    }
 
+    function renderPieChartForItems(canvasId, currentChart, items) {
+      const totals = buildAssetTotals(items);
       const labels = Object.keys(totals).filter(k => totals[k] > 0);
       const data = labels.map(k => totals[k]);
 
-      const ctx = document.getElementById("assetChart");
-      if (assetChart) assetChart.destroy();
+      const ctx = document.getElementById(canvasId);
+      if (currentChart) currentChart.destroy();
 
-      assetChart = new Chart(ctx, {
+      if (!labels.length) {
+        return new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: ["없음"],
+            datasets: [{ data: [1] }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: 8 },
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+      }
+
+      return new Chart(ctx, {
         type: "pie",
-        data: {
-          labels,
-          datasets: [{ data }]
-        },
+        data: { labels, datasets: [{ data }] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           layout: { padding: 8 },
-          plugins: {
-            legend: { position: "bottom" }
-          }
+          plugins: { legend: { position: "bottom" } }
         }
       });
     }
 
+    function renderAccountCharts() {
+      isaAssetChart = renderPieChartForItems("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
+      pensionAssetChart = renderPieChartForItems("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
+    }
+
     function applySavedTargetsToInputs() {
-      document.getElementById("targetStock").value = targets.stock ?? 60;
-      document.getElementById("targetBond").value = targets.bond ?? 20;
-      document.getElementById("targetGold").value = targets.gold ?? 10;
-      document.getElementById("targetDollar").value = targets.dollar ?? 5;
-      document.getElementById("targetREIT").value = targets.reit ?? 5;
+      ensureAccountTargets();
+
+      document.getElementById("isaTargetStock").value = accountTargets["ISA"].stock ?? 60;
+      document.getElementById("isaTargetBond").value = accountTargets["ISA"].bond ?? 20;
+      document.getElementById("isaTargetGold").value = accountTargets["ISA"].gold ?? 10;
+      document.getElementById("isaTargetDollar").value = accountTargets["ISA"].dollar ?? 5;
+      document.getElementById("isaTargetREIT").value = accountTargets["ISA"].reit ?? 5;
+
+      document.getElementById("pensionTargetStock").value = accountTargets["연금저축"].stock ?? 60;
+      document.getElementById("pensionTargetBond").value = accountTargets["연금저축"].bond ?? 20;
+      document.getElementById("pensionTargetGold").value = accountTargets["연금저축"].gold ?? 10;
+      document.getElementById("pensionTargetDollar").value = accountTargets["연금저축"].dollar ?? 5;
+      document.getElementById("pensionTargetREIT").value = accountTargets["연금저축"].reit ?? 5;
     }
 
-    function saveTargetsAndRender() {
-      targets = {
-        stock: num(document.getElementById("targetStock").value),
-        bond: num(document.getElementById("targetBond").value),
-        gold: num(document.getElementById("targetGold").value),
-        dollar: num(document.getElementById("targetDollar").value),
-        reit: num(document.getElementById("targetREIT").value)
-      };
-      localStorage.setItem("portfolio_targets_v1", JSON.stringify(targets));
-      renderRebalance();
+    function saveTargetsAndRender(account) {
+      ensureAccountTargets();
+
+      if (account === "ISA") {
+        accountTargets["ISA"] = {
+          stock: num(document.getElementById("isaTargetStock").value),
+          bond: num(document.getElementById("isaTargetBond").value),
+          gold: num(document.getElementById("isaTargetGold").value),
+          dollar: num(document.getElementById("isaTargetDollar").value),
+          reit: num(document.getElementById("isaTargetREIT").value)
+        };
+      }
+
+      if (account === "연금저축") {
+        accountTargets["연금저축"] = {
+          stock: num(document.getElementById("pensionTargetStock").value),
+          bond: num(document.getElementById("pensionTargetBond").value),
+          gold: num(document.getElementById("pensionTargetGold").value),
+          dollar: num(document.getElementById("pensionTargetDollar").value),
+          reit: num(document.getElementById("pensionTargetREIT").value)
+        };
+      }
+
+      localStorage.setItem("portfolio_account_targets_v1", JSON.stringify(accountTargets));
+      renderAllRebalances();
     }
 
-    function renderRebalance() {
-      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
+    function renderRebalanceForAccount(account, resultId) {
+      const items = holdings.filter(h => h.account === account);
+      const totalValue = items.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
       const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
 
-      holdings.forEach(h => {
+      items.forEach(h => {
         current[h.assetType] = (current[h.assetType] || 0) + num(h.qty) * num(h.price);
       });
 
+      const targets = accountTargets[account] || { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
       const targetMap = {
         주식: targets.stock,
         채권: targets.bond,
@@ -1741,6 +1785,11 @@
         달러: targets.dollar,
         리츠: targets.reit
       };
+
+      if (totalValue <= 0) {
+        document.getElementById(resultId).innerHTML = `<div class="empty-text">보유 종목이 없어.</div>`;
+        return;
+      }
 
       let html = "";
       ["주식", "채권", "금", "달러", "리츠"].forEach(type => {
@@ -1763,7 +1812,12 @@
         html += `<div><strong>${type}</strong> | 현재 ${nowWeight.toFixed(2)}% (${won(nowValue)}) | 목표 ${targetWeight.toFixed(2)}% (${won(targetValue)}) | <span class="${actionClass}">${actionText}</span></div>`;
       });
 
-      document.getElementById("rebalanceResult").innerHTML = html;
+      document.getElementById(resultId).innerHTML = html;
+    }
+
+    function renderAllRebalances() {
+      renderRebalanceForAccount("ISA", "isaRebalanceResult");
+      renderRebalanceForAccount("연금저축", "pensionRebalanceResult");
     }
 
     function addMonthlyInvestment() {
@@ -1775,9 +1829,7 @@
         return;
       }
 
-      monthlyInvestments.push({ month, amount });
-      monthlyInvestments.sort((a, b) => a.month.localeCompare(b.month));
-      localStorage.setItem("portfolio_monthly_investments_v1", JSON.stringify(monthlyInvestments));
+      addOrUpdateMonthlyInvestment(month, amount);
 
       document.getElementById("investMonth").value = "";
       document.getElementById("investAmount").value = "";
@@ -1788,7 +1840,7 @@
 
     function deleteMonthlyInvestment(index) {
       monthlyInvestments.splice(index, 1);
-      localStorage.setItem("portfolio_monthly_investments_v1", JSON.stringify(monthlyInvestments));
+      saveMonthlyInvestments();
       renderMonthlyTable();
       renderMonthlyChart();
     }
@@ -1838,14 +1890,26 @@
       renderAccountSummary();
       renderHoldingsSections();
       renderTransactions();
-      renderChart();
-      renderRebalance();
+      renderAccountCharts();
+      renderAllRebalances();
       renderDividendSummary();
       renderMonthlyTable();
       renderMonthlyChart();
+      updateTransactionNameSuggestions();
     }
 
+    document.getElementById("txAccount").addEventListener("change", () => {
+      updateTransactionNameSuggestions();
+      document.getElementById("txTicker").value = "";
+      autofillTransactionTickerFromName();
+    });
+
+    document.getElementById("txName").addEventListener("input", () => {
+      autofillTransactionTickerFromName();
+    });
+
     setDefaultTransactionDate();
+    ensureAccountTargets();
 
     reloadFromSupabase().catch(err => {
       alert("초기 불러오기 실패: " + err.message);
