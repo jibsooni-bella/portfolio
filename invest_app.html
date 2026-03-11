@@ -1724,20 +1724,27 @@
       isaAssetChart = renderPieChartForItems("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
       pensionAssetChart = renderPieChartForItems("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
     }
+
     function renderRebalanceTitles() {
-  const isaTotal = holdings
-    .filter(h => h.account === "ISA")
-    .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
+      const isaTotal = holdings
+        .filter(h => h.account === "ISA")
+        .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
 
-  const pensionTotal = holdings
-    .filter(h => h.account === "연금저축")
-    .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
+      const pensionTotal = holdings
+        .filter(h => h.account === "연금저축")
+        .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
 
-  document.getElementById("isaRebalanceTitle").textContent =
-    `ISA 리밸런싱 : 총금액 ${won(isaTotal)}`;
+      const isaTitleEl = document.getElementById("isaRebalanceTitle");
+      const pensionTitleEl = document.getElementById("pensionRebalanceTitle");
 
-  document.getElementById("pensionRebalanceTitle").textContent =
-    `연금저축 리밸런싱 : 총금액 ${won(pensionTotal)}`;
+      if (isaTitleEl) {
+        isaTitleEl.textContent = `ISA 리밸런싱 : 총금액 ${won(isaTotal)}`;
+      }
+      if (pensionTitleEl) {
+        pensionTitleEl.textContent = `연금저축 리밸런싱 : 총금액 ${won(pensionTotal)}`;
+      }
+    }
+
     function applySavedTargetsToInputs() {
       ensureAccountTargets();
 
@@ -1779,6 +1786,7 @@
 
       localStorage.setItem("portfolio_account_targets_v1", JSON.stringify(accountTargets));
       renderAllRebalances();
+      renderRebalanceTitles();
     }
 
     function renderRebalanceForAccount(account, resultId) {
@@ -1932,4 +1940,3 @@
   </script>
 </body>
 </html>
-
