@@ -572,7 +572,7 @@
       <div class="help-box">
         거래기록 사용법<br>
         아래 <strong>거래기록 추가</strong>에서 매수내역을 입력하면 <strong>보유 종목에 자동 반영</strong>돼.<br>
-        처음부터 거래기록 중심으로 관리하면 평균단가와 매입원금 추적이 쉬워.
+        거래기록 삭제 시에는 그 거래분만 보유종목에서 자동 차감돼.
       </div>
 
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
@@ -844,6 +844,7 @@
     };
 
     const HOLDINGS_PREVIEW_COUNT = 5;
+    const EPSILON = 0.000001;
 
     let monthlyInvestments = JSON.parse(localStorage.getItem("portfolio_monthly_investments_v1") || "[]");
     let targets = JSON.parse(localStorage.getItem("portfolio_targets_v1") || `{
@@ -1282,6 +1283,57 @@
       render();
     }
 
+    async function reverseHoldingFromTransaction(tx) {
+      const idx = findHoldingIndexByTx(tx);
+      if (idx < 0) return true;
+
+      const item = holdings[idx];
+      const nextQty = num(item.qty) - num(tx.quantity);
+      const nextBuy = num(item.buy) - num(tx.total_amount);
+
+      if (nextQty <= EPSILON) {
+        const { error } = await db.from("holdings").delete().eq("id", item.id);
+        if (error) {
+          alert("보유종목 자동차감 실패: " + error.message);
+          console.error(error);
+          return false;
+        }
+
+        holdings = holdings.filter(h => h.id !== item.id);
+        return true;
+      }
+
+      item.qty = Math.max(0, nextQty);
+      item.buy = Math.max(0, nextBuy);
+
+      const payload = {
+        account: item.account,
+        assetType: item.assetType,
+        name: item.name,
+        ticker: item.ticker,
+        qty: num(item.qty),
+        buy: num(item.buy),
+        price: num(item.price),
+        expectedDividendPerShare: num(item.expectedDividendPerShare),
+        dividendYield: num(item.dividendYield),
+        dividendCycle: item.dividendCycle || "직접입력",
+        dividendPerPayment: num(item.dividendPerPayment)
+      };
+
+      const { error } = await db
+        .from("holdings")
+        .update(payload)
+        .eq("id", item.id);
+
+      if (error) {
+        alert("보유종목 자동차감 실패: " + error.message);
+        console.error(error);
+        return false;
+      }
+
+      return true;
+    }
+
     async function deleteHolding(id) {
       const { error } = await db.from("holdings").delete().eq("id", id);
 
@@ -1296,7 +1348,12 @@
     }
 
     async function deleteTransaction(id) {
-      const ok = confirm("이 거래기록만 삭제할까?\n주의: 현재 버전은 거래기록 삭제 시 holdings 자동 역계산까지는 하지 않아.");
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      const ok = confirm(
+        "이 거래기록을 삭제하면 그 거래분만 보유종목에서도 자동 차감돼.\n계속할까?"
+      );
       if (!ok) return;
 
       const { error } = await db.from("transactions").delete().eq("id", id);
@@ -1308,7 +1365,12 @@
       }
 
       transactions = transactions.filter(t => t.id !== id);
-      renderTransactions();
+
+      const synced = await reverseHoldingFromTransaction(tx);
+      if (!synced) return;
+
+      setLastUpdateText();
+      render();
     }
 
     async function updateField(id, field, value) {
