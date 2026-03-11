@@ -593,7 +593,7 @@
       </div>
 
       <div class="card">
-        <div class="account-panel-title">ISA 리밸런싱</div>
+        <div class="account-panel-title" id="isaRebalanceTitle">ISA 리밸런싱 : 총금액 0원</div>
         <div class="grid-5">
           <div><label for="isaTargetStock">주식 목표%</label><input id="isaTargetStock" type="number" step="any" /></div>
           <div><label for="isaTargetBond">채권 목표%</label><input id="isaTargetBond" type="number" step="any" /></div>
@@ -617,7 +617,7 @@
       </div>
 
       <div class="card">
-        <div class="account-panel-title">연금저축 리밸런싱</div>
+        <div class="account-panel-title" id="pensionRebalanceTitle">연금저축 리밸런싱 : 총금액 0원</div>
         <div class="grid-5">
           <div><label for="pensionTargetStock">주식 목표%</label><input id="pensionTargetStock" type="number" step="any" /></div>
           <div><label for="pensionTargetBond">채권 목표%</label><input id="pensionTargetBond" type="number" step="any" /></div>
@@ -1724,7 +1724,20 @@
       isaAssetChart = renderPieChartForItems("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
       pensionAssetChart = renderPieChartForItems("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
     }
+    function renderRebalanceTitles() {
+  const isaTotal = holdings
+    .filter(h => h.account === "ISA")
+    .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
 
+  const pensionTotal = holdings
+    .filter(h => h.account === "연금저축")
+    .reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
+
+  document.getElementById("isaRebalanceTitle").textContent =
+    `ISA 리밸런싱 : 총금액 ${won(isaTotal)}`;
+
+  document.getElementById("pensionRebalanceTitle").textContent =
+    `연금저축 리밸런싱 : 총금액 ${won(pensionTotal)}`;
     function applySavedTargetsToInputs() {
       ensureAccountTargets();
 
@@ -1891,6 +1904,7 @@
       renderHoldingsSections();
       renderTransactions();
       renderAccountCharts();
+      renderRebalanceTitles();
       renderAllRebalances();
       renderDividendSummary();
       renderMonthlyTable();
@@ -1918,3 +1932,4 @@
   </script>
 </body>
 </html>
+
