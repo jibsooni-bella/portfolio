@@ -456,6 +456,14 @@
       color: #667085;
     }
 
+    .holdings-toggle-row {
+      justify-content: center;
+    }
+
+    .holdings-toggle-btn {
+      min-width: 220px;
+    }
+
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
@@ -828,6 +836,15 @@
     let showAllTransactions = false;
     let assetChart = null;
     let monthlyChart = null;
+
+    let expandedAccounts = {
+      "ISA": false,
+      "연금저축": false,
+      "금현물계좌": false
+    };
+
+    const HOLDINGS_PREVIEW_COUNT = 5;
+
     let monthlyInvestments = JSON.parse(localStorage.getItem("portfolio_monthly_investments_v1") || "[]");
     let targets = JSON.parse(localStorage.getItem("portfolio_targets_v1") || `{
       "stock": 60,
@@ -953,6 +970,11 @@
       }
 
       return perPayment * getCycleCount(cycle);
+    }
+
+    function toggleAccountSection(accountName) {
+      expandedAccounts[accountName] = !expandedAccounts[accountName];
+      renderHoldingsSections();
     }
 
     async function fetchPriceFromWorker(ticker) {
@@ -1561,13 +1583,34 @@
       const totalPortfolioValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
 
       const sections = [
-        { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
-        { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
-        { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }
+        {
+          title: "ISA",
+          items: holdings
+            .filter(h => h.account === "ISA")
+            .sort((a, b) => (num(b.qty) * num(b.price)) - (num(a.qty) * num(a.price)))
+        },
+        {
+          title: "연금저축",
+          items: holdings
+            .filter(h => h.account === "연금저축")
+            .sort((a, b) => (num(b.qty) * num(b.price)) - (num(a.qty) * num(a.price)))
+        },
+        {
+          title: "금현물계좌",
+          items: holdings
+            .filter(h => h.account === "금현물계좌")
+            .sort((a, b) => (num(b.qty) * num(b.price)) - (num(a.qty) * num(a.price)))
+        }
       ];
 
       container.innerHTML = sections.map(section => {
-        const rows = getTableRows(section.items, totalPortfolioValue);
+        const isExpanded = expandedAccounts[section.title];
+        const visibleItems = isExpanded
+          ? section.items
+          : section.items.slice(0, HOLDINGS_PREVIEW_COUNT);
+
+        const rows = getTableRows(visibleItems, totalPortfolioValue);
+        const hiddenCount = Math.max(section.items.length - HOLDINGS_PREVIEW_COUNT, 0);
 
         return `
           <div class="account-section">
@@ -1603,6 +1646,26 @@
                       <tbody>${rows}</tbody>
                     </table>
                   </div>
+
+                  ${
+                    section.items.length > HOLDINGS_PREVIEW_COUNT
+                      ? `
+                        <div class="btn-row holdings-toggle-row" style="margin-top:10px;">
+                          <button
+                            type="button"
+                            class="secondary holdings-toggle-btn"
+                            onclick="toggleAccountSection('${section.title}')"
+                          >
+                            ${
+                              isExpanded
+                                ? `▲ ${section.title} 접기`
+                                : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`
+                            }
+                          </button>
+                        </div>
+                      `
+                      : ""
+                  }
                 `
             }
           </div>
