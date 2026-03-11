@@ -438,6 +438,24 @@
       position: relative;
     }
 
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .section-head h2 {
+      margin: 0;
+    }
+
+    .section-meta {
+      font-size: 13px;
+      color: #667085;
+    }
+
     @media (max-width: 1100px) {
       .grid-3 {
         grid-template-columns: 1fr;
@@ -543,6 +561,12 @@
         예: TIGER 200 총 14,960원 / 22주 = 680원 → 직접입력 + 680
       </div>
 
+      <div class="help-box">
+        거래기록 사용법<br>
+        아래 <strong>거래기록 추가</strong>에서 매수내역을 입력하면 <strong>보유 종목에 자동 반영</strong>돼.<br>
+        처음부터 거래기록 중심으로 관리하면 평균단가와 매입원금 추적이 쉬워.
+      </div>
+
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
     </div>
 
@@ -619,6 +643,91 @@
     <div class="card">
       <h2>보유 종목</h2>
       <div id="holdingsSections"></div>
+    </div>
+
+    <div class="card">
+      <h2>거래기록 추가</h2>
+      <div class="grid">
+        <div>
+          <label for="txDate">거래일</label>
+          <input id="txDate" type="date" />
+        </div>
+        <div>
+          <label for="txAccount">계좌</label>
+          <select id="txAccount">
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+            <option value="금현물계좌">금현물계좌</option>
+          </select>
+        </div>
+        <div>
+          <label for="txName">종목명</label>
+          <input id="txName" placeholder="예: TIGER 200" />
+        </div>
+        <div>
+          <label for="txTicker">티커</label>
+          <input id="txTicker" placeholder="예: 102110.KS / KRX-GOLD" />
+        </div>
+        <div>
+          <label for="txQty">수량</label>
+          <input id="txQty" type="number" step="any" placeholder="예: 2" />
+        </div>
+        <div>
+          <label for="txUnitPrice">1주 단가</label>
+          <input id="txUnitPrice" type="number" step="any" placeholder="예: 82000" />
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:10px;">
+        <div>
+          <label for="txFee">수수료</label>
+          <input id="txFee" type="number" step="any" placeholder="없으면 0" />
+        </div>
+        <div>
+          <label for="txMemo">메모</label>
+          <input id="txMemo" placeholder="예: 추가매수 / 적립식 매수" />
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button onclick="addTransaction()">거래기록 추가 + 보유종목 자동반영</button>
+      </div>
+
+      <div class="notice">
+        현재 이 기능은 <strong>매수기록 중심</strong>이야. 입력하면 transactions에 저장되고, holdings에 자동 합산 반영돼.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>거래기록</h2>
+        <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
+      </div>
+
+      <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
+        <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
+      </div>
+
+      <div class="table-wrap">
+        <table style="min-width:1200px;">
+          <thead>
+            <tr>
+              <th>거래일</th>
+              <th>계좌</th>
+              <th>종목명</th>
+              <th>티커</th>
+              <th>구분</th>
+              <th class="num">수량</th>
+              <th class="num">1주 단가</th>
+              <th class="num">총금액</th>
+              <th class="num">수수료</th>
+              <th>메모</th>
+              <th>삭제</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="two-col">
@@ -715,6 +824,8 @@
     const db = createClient(supabaseUrl, supabaseKey);
 
     let holdings = [];
+    let transactions = [];
+    let showAllTransactions = false;
     let assetChart = null;
     let monthlyChart = null;
     let monthlyInvestments = JSON.parse(localStorage.getItem("portfolio_monthly_investments_v1") || "[]");
@@ -751,6 +862,12 @@
       const now = new Date();
       document.getElementById("lastUpdateText").textContent =
         "마지막 업데이트: " + now.toLocaleString("ko-KR");
+    }
+
+    function setDefaultTransactionDate() {
+      const today = new Date().toISOString().slice(0, 10);
+      const el = document.getElementById("txDate");
+      if (el && !el.value) el.value = today;
     }
 
     function normalizeText(value = "") {
@@ -852,21 +969,24 @@
     }
 
     async function reloadFromSupabase() {
-      const { data, error } = await db
-        .from("holdings")
-        .select("*")
-        .order("id", { ascending: true });
+      const [holdingsRes, transactionsRes] = await Promise.all([
+        db.from("holdings").select("*").order("id", { ascending: true }),
+        db.from("transactions").select("*").order("trade_date", { ascending: false }).order("id", { ascending: false })
+      ]);
 
-      console.log("Supabase data:", data);
-      console.log("Supabase error:", error);
-
-      if (error) {
-        alert("초기 불러오기 실패: " + error.message);
-        console.error(error);
+      if (holdingsRes.error) {
+        alert("holdings 불러오기 실패: " + holdingsRes.error.message);
+        console.error(holdingsRes.error);
         return;
       }
 
-      holdings = (data || []).map(h => ({
+      if (transactionsRes.error) {
+        alert("transactions 불러오기 실패: " + transactionsRes.error.message);
+        console.error(transactionsRes.error);
+        return;
+      }
+
+      holdings = (holdingsRes.data || []).map(h => ({
         ...h,
         qty: Number(h.qty ?? 0),
         buy: Number(h.buy ?? 0),
@@ -878,9 +998,16 @@
         assetType: classifyAsset(h.name, h.ticker, h.account)
       }));
 
-      console.log("Mapped holdings:", holdings);
+      transactions = (transactionsRes.data || []).map(t => ({
+        ...t,
+        quantity: Number(t.quantity ?? 0),
+        unit_price: Number(t.unit_price ?? 0),
+        total_amount: Number(t.total_amount ?? 0),
+        fee: Number(t.fee ?? 0)
+      }));
 
       applySavedTargetsToInputs();
+      setDefaultTransactionDate();
       render();
     }
 
@@ -950,6 +1077,189 @@
       render();
     }
 
+    function findHoldingIndexByTx(tx) {
+      const txName = normalizeText(tx.name);
+      const txTicker = normalizeText(tx.ticker || "");
+      return holdings.findIndex(h =>
+        h.account === tx.account &&
+        normalizeText(h.name) === txName &&
+        normalizeText(h.ticker || "") === txTicker
+      );
+    }
+
+    async function upsertHoldingFromTransaction(tx) {
+      const addedBuy = num(tx.total_amount);
+      let latestPrice = 0;
+
+      if (!isManualGold({ account: tx.account, ticker: tx.ticker }) && tx.ticker) {
+        latestPrice = await fetchPriceFromWorker(tx.ticker);
+      }
+
+      const idx = findHoldingIndexByTx(tx);
+
+      if (idx >= 0) {
+        const item = holdings[idx];
+        item.qty = num(item.qty) + num(tx.quantity);
+        item.buy = num(item.buy) + addedBuy;
+        item.assetType = classifyAsset(item.name, item.ticker, item.account);
+
+        if (!isManualGold(item) && latestPrice > 0) {
+          item.price = latestPrice;
+        }
+
+        const payload = {
+          account: item.account,
+          assetType: item.assetType,
+          name: item.name,
+          ticker: item.ticker,
+          qty: num(item.qty),
+          buy: num(item.buy),
+          price: num(item.price),
+          expectedDividendPerShare: num(item.expectedDividendPerShare),
+          dividendYield: num(item.dividendYield),
+          dividendCycle: item.dividendCycle || "직접입력",
+          dividendPerPayment: num(item.dividendPerPayment)
+        };
+
+        const { error } = await db
+          .from("holdings")
+          .update(payload)
+          .eq("id", item.id);
+
+        if (error) {
+          alert("보유종목 자동반영 실패: " + error.message);
+          console.error(error);
+          return false;
+        }
+
+        return true;
+      }
+
+      const newHolding = {
+        account: tx.account,
+        assetType: classifyAsset(tx.name, tx.ticker, tx.account),
+        name: tx.name,
+        ticker: tx.ticker,
+        qty: num(tx.quantity),
+        buy: addedBuy,
+        price: latestPrice > 0 ? latestPrice : 0,
+        expectedDividendPerShare: 0,
+        dividendYield: 0,
+        dividendCycle: "직접입력",
+        dividendPerPayment: 0
+      };
+
+      const { data, error } = await db
+        .from("holdings")
+        .insert([newHolding])
+        .select();
+
+      if (error) {
+        alert("보유종목 자동생성 실패: " + error.message);
+        console.error(error);
+        return false;
+      }
+
+      if (data && data.length > 0) {
+        holdings.push({
+          ...data[0],
+          qty: Number(data[0].qty ?? 0),
+          buy: Number(data[0].buy ?? 0),
+          price: Number(data[0].price ?? 0),
+          expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0),
+          dividendYield: Number(data[0].dividendYield ?? 0),
+          dividendCycle: data[0].dividendCycle ?? "직접입력",
+          dividendPerPayment: Number(data[0].dividendPerPayment ?? 0),
+          assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account)
+        });
+      }
+
+      return true;
+    }
+
+    async function addTransaction() {
+      const trade_date = document.getElementById("txDate").value;
+      const account = document.getElementById("txAccount").value;
+      const name = document.getElementById("txName").value.trim();
+      const ticker = document.getElementById("txTicker").value.trim();
+      const quantity = num(document.getElementById("txQty").value);
+      const unit_price = num(document.getElementById("txUnitPrice").value);
+      const fee = num(document.getElementById("txFee").value);
+      const memo = document.getElementById("txMemo").value.trim();
+
+      if (!trade_date) {
+        alert("거래일을 입력해줘.");
+        return;
+      }
+
+      if (!name) {
+        alert("종목명을 입력해줘.");
+        return;
+      }
+
+      if (quantity <= 0) {
+        alert("수량을 0보다 크게 입력해줘.");
+        return;
+      }
+
+      if (unit_price <= 0) {
+        alert("1주 단가를 0보다 크게 입력해줘.");
+        return;
+      }
+
+      const total_amount = quantity * unit_price + fee;
+
+      const tx = {
+        trade_date,
+        account,
+        name,
+        ticker,
+        trade_type: "매수",
+        quantity,
+        unit_price,
+        total_amount,
+        fee,
+        memo
+      };
+
+      const { data, error } = await db
+        .from("transactions")
+        .insert([tx])
+        .select();
+
+      if (error) {
+        alert("거래기록 저장 실패: " + error.message);
+        console.error(error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const inserted = {
+          ...data[0],
+          quantity: Number(data[0].quantity ?? 0),
+          unit_price: Number(data[0].unit_price ?? 0),
+          total_amount: Number(data[0].total_amount ?? 0),
+          fee: Number(data[0].fee ?? 0)
+        };
+
+        transactions.unshift(inserted);
+
+        const synced = await upsertHoldingFromTransaction(inserted);
+        if (!synced) return;
+      }
+
+      document.getElementById("txName").value = "";
+      document.getElementById("txTicker").value = "";
+      document.getElementById("txQty").value = "";
+      document.getElementById("txUnitPrice").value = "";
+      document.getElementById("txFee").value = "";
+      document.getElementById("txMemo").value = "";
+
+      setDefaultTransactionDate();
+      setLastUpdateText();
+      render();
+    }
+
     async function deleteHolding(id) {
       const { error } = await db.from("holdings").delete().eq("id", id);
 
@@ -961,6 +1271,22 @@
 
       holdings = holdings.filter(h => h.id !== id);
       render();
+    }
+
+    async function deleteTransaction(id) {
+      const ok = confirm("이 거래기록만 삭제할까?\n주의: 현재 버전은 거래기록 삭제 시 holdings 자동 역계산까지는 하지 않아.");
+      if (!ok) return;
+
+      const { error } = await db.from("transactions").delete().eq("id", id);
+
+      if (error) {
+        alert("거래기록 삭제 실패: " + error.message);
+        console.error(error);
+        return;
+      }
+
+      transactions = transactions.filter(t => t.id !== id);
+      renderTransactions();
     }
 
     async function updateField(id, field, value) {
@@ -1284,6 +1610,47 @@
       }).join("");
     }
 
+    function renderTransactions() {
+      const body = document.getElementById("transactionsBody");
+      const btn = document.getElementById("toggleTransactionsBtn");
+      const meta = document.getElementById("transactionsMeta");
+
+      if (!transactions.length) {
+        body.innerHTML = `<tr><td colspan="11" class="empty-text">거래기록이 없어.</td></tr>`;
+        meta.textContent = "거래기록 0건";
+        btn.textContent = "전체보기";
+        return;
+      }
+
+      const visible = showAllTransactions ? transactions : transactions.slice(0, 7);
+      meta.textContent = showAllTransactions
+        ? `전체 ${transactions.length}건 표시`
+        : `최근 ${visible.length}건 표시 / 전체 ${transactions.length}건`;
+
+      btn.textContent = showAllTransactions ? "최근만 보기" : "전체보기";
+
+      body.innerHTML = visible.map(t => `
+        <tr>
+          <td>${esc(t.trade_date || "")}</td>
+          <td>${esc(t.account || "")}</td>
+          <td>${esc(t.name || "")}</td>
+          <td>${esc(t.ticker || "")}</td>
+          <td>${esc(t.trade_type || "매수")}</td>
+          <td class="num">${num(t.quantity).toLocaleString("ko-KR")}</td>
+          <td class="num">${won(t.unit_price)}</td>
+          <td class="num">${won(t.total_amount)}</td>
+          <td class="num">${won(t.fee)}</td>
+          <td>${esc(t.memo || "")}</td>
+          <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function toggleTransactionsView() {
+      showAllTransactions = !showAllTransactions;
+      renderTransactions();
+    }
+
     function renderChart() {
       const totals = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
 
@@ -1450,12 +1817,15 @@
       renderSummary();
       renderAccountSummary();
       renderHoldingsSections();
+      renderTransactions();
       renderChart();
       renderRebalance();
       renderDividendSummary();
       renderMonthlyTable();
       renderMonthlyChart();
     }
+
+    setDefaultTransactionDate();
 
     reloadFromSupabase().catch(err => {
       alert("초기 불러오기 실패: " + err.message);
