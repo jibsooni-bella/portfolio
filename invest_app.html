@@ -245,7 +245,12 @@
     function pct(n) { return `${num(n).toFixed(2)}%`; }
     function esc(value) { return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
     function setLastUpdateText() { document.getElementById("lastUpdateText").textContent = "마지막 업데이트: " + new Date().toLocaleString("ko-KR"); }
-    function setDefaultTransactionDate() { const today = new Date().toISOString().slice(0, 10); const el = document.getElementById("txDate"); if (el && !el.value) el.value = today; }
+    function setDefaultTransactionDate() {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const el = document.getElementById("txDate");
+      if (el && !el.value) el.value = today;
+    }
     function normalizeText(value = "") { return String(value).replace(/\s+/g, "").toLowerCase(); }
     function hasAny(text, keywords) { return keywords.some(keyword => text.includes(keyword)); }
     function monthKeyFromDate(dateStr = "") { return String(dateStr).slice(0, 7); }
@@ -937,3 +942,4 @@
   </script>
 </body>
 </html>
+
