@@ -334,7 +334,9 @@
 
       holdings = (holdingsRes.data || []).map(h => ({
         ...h,
-        qty: Number(h.qty ?? 0), buy: Number(h.buy ?? 0), price: Number(h.price ?? 0),
+        qty: Number(h.qty ?? 0),
+        buy: Number(h.buy ?? 0),
+        price: Number(h.price ?? 0),
         expectedDividendPerShare: Number(h.expectedDividendPerShare ?? 0),
         dividendYield: Number(h.dividendYield ?? 0),
         dividendCycle: h.dividendCycle ?? "직접입력",
@@ -344,7 +346,9 @@
 
       transactions = (transactionsRes.data || []).map(t => ({
         ...t,
-        quantity: Number(t.quantity ?? 0), unit_price: Number(t.unit_price ?? 0), total_amount: Number(t.total_amount ?? 0)
+        quantity: Number(t.quantity ?? 0),
+        unit_price: Number(t.unit_price ?? 0),
+        total_amount: Number(t.total_amount ?? 0)
       }));
 
       await seedDefaultAccountTargetsIfEmpty();
@@ -374,9 +378,20 @@
       else { current.key = key; current.order = "desc"; }
       renderHoldingsSections();
     }
-    function getSortIndicator(accountName, key) { const current = holdingsSortState[accountName]; if (current.key !== key) return ""; return `<span class="sort-indicator">${current.order === "desc" ? "▼" : "▲"}</span>`; }
+    function getSortIndicator(accountName, key) {
+      const current = holdingsSortState[accountName];
+      if (current.key !== key) return "";
+      return `<span class="sort-indicator">${current.order === "desc" ? "▼" : "▲"}</span>`;
+    }
     function getHoldingMetric(h, key, totalPortfolioValue = 0) {
-      const qty = num(h.qty), buy = num(h.buy), price = num(h.price), value = qty * price, profit = value - buy, rate = buy > 0 ? (profit / buy) * 100 : 0, weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0, avg = qty > 0 ? buy / qty : 0;
+      const qty = num(h.qty);
+      const buy = num(h.buy);
+      const price = num(h.price);
+      const value = qty * price;
+      const profit = value - buy;
+      const rate = buy > 0 ? (profit / buy) * 100 : 0;
+      const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
+      const avg = qty > 0 ? buy / qty : 0;
       return ({ qty, buy, avg, price, value, profit, rate, weight })[key] ?? value;
     }
     function sortHoldingsItems(items, accountName, totalPortfolioValue) {
@@ -624,10 +639,11 @@
       item.price = latest;
       const { error } = await db.from("holdings").update({ price: latest }).eq("id", item.id);
       if (error) return alert("가격 저장 실패: " + error.message);
-      setLastUpdateText(); render();
+      setLastUpdateText();
+      render();
     }
 
-    async function updateAllPrices() {
+    async function updateAllPrices(showAlert = true) {
       for (const h of holdings) {
         if (!h.ticker || isManualGold(h)) continue;
         const latest = await fetchPriceFromWorker(h.ticker);
@@ -637,7 +653,9 @@
           if (error) console.error(error);
         }
       }
-      setLastUpdateText(); render(); alert("ETF 가격 업데이트 완료!");
+      setLastUpdateText();
+      render();
+      if (showAlert) alert("ETF 가격 업데이트 완료!");
     }
 
     function renderSummary() {
@@ -673,7 +691,7 @@
     }
 
     function renderDividendSummary() {
-      const dividendItems = holdings.filter(h => calcExpectedDividendPerShare(h) > 0 || num(h.dividendYield) > 0);
+      const dividendItems = holdings.filter(h => h.account !== "금현물계좌").filter(h => calcExpectedDividendPerShare(h) > 0 || num(h.dividendYield) > 0);
       const yearly = dividendItems.reduce((s, h) => {
         const expectedPerShare = calcExpectedDividendPerShare(h);
         if (expectedPerShare > 0) return s + num(h.qty) * expectedPerShare;
@@ -687,8 +705,9 @@
       document.getElementById("dividendBase").textContent = won(base);
     }
 
-    function getTableRows(accountItems, totalPortfolioValue) {
+    function getTableRows(accountItems, totalPortfolioValue, accountName) {
       return accountItems.map(h => {
+        const isGoldAccount = accountName === "금현물계좌";
         const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
         const value = num(h.qty) * num(h.price);
         const profit = value - num(h.buy);
@@ -701,6 +720,7 @@
         const yearlyDividend = expectedDividendPerShare > 0 ? num(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
         const derivedDividendYield = expectedDividendPerShare > 0 ? (num(h.price) > 0 ? (expectedDividendPerShare / num(h.price)) * 100 : 0) : fallbackYield;
         const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
+
         return `
           <tr>
             <td class="account-cell"><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option></select></td>
@@ -715,29 +735,81 @@
             <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
             <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
             <td class="weight-cell num">${pct(weight)}</td>
-            <td class="cycle-cell"><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></td>
-            <td class="dividend-per-payment-cell num"><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></td>
-            <td class="dividend-input-cell num"><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></td>
-            <td class="dividend-value-cell num">${won(yearlyDividend)}<br><span class="muted">${pct(derivedDividendYield)}</span></td>
+            ${!isGoldAccount ? `
+              <td class="cycle-cell"><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></td>
+              <td class="dividend-per-payment-cell num"><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></td>
+              <td class="dividend-input-cell num"><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></td>
+              <td class="dividend-value-cell num">${won(yearlyDividend)}<br><span class="muted">${pct(derivedDividendYield)}</span></td>
+            ` : ``}
             <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
             <td class="action-cell"><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
           </tr>`;
       }).join("");
     }
 
-    function renderSortableHeader(accountName, key, label, className = "") { return `<th class="${className} sortable" onclick="setHoldingsSort('${accountName}', '${key}')">${label}${getSortIndicator(accountName, key)}</th>`; }
+    function renderSortableHeader(accountName, key, label, className = "") {
+      return `<th class="${className} sortable" onclick="setHoldingsSort('${accountName}', '${key}')">${label}${getSortIndicator(accountName, key)}</th>`;
+    }
 
     function renderHoldingsSections() {
       const container = document.getElementById("holdingsSections");
       const totalPortfolioValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      const rawSections = [{ title: "ISA", items: holdings.filter(h => h.account === "ISA") }, { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") }, { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }];
+      const rawSections = [
+        { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
+        { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
+        { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }
+      ];
+
       container.innerHTML = rawSections.map(section => {
         const sortedItems = sortHoldingsItems(section.items, section.title, totalPortfolioValue);
         const isExpanded = expandedAccounts[section.title];
         const visibleItems = isExpanded ? sortedItems : sortedItems.slice(0, HOLDINGS_PREVIEW_COUNT);
-        const rows = getTableRows(visibleItems, totalPortfolioValue);
+        const rows = getTableRows(visibleItems, totalPortfolioValue, section.title);
         const hiddenCount = Math.max(sortedItems.length - HOLDINGS_PREVIEW_COUNT, 0);
-        return `<div class="account-section"><div class="account-section-title">${section.title}</div>${sortedItems.length === 0 ? `<div class="empty-text">등록된 종목이 없어.</div>` : `<div class="table-wrap"><table><thead><tr><th class="account-cell">계좌</th><th class="asset-cell">자산군</th><th class="name-cell">종목명</th><th class="ticker-cell">티커</th>${renderSortableHeader(section.title, "qty", "수량", "qty-cell")}${renderSortableHeader(section.title, "buy", "총 매입금", "buy-cell num")}${renderSortableHeader(section.title, "avg", "평균단가", "avg-cell num")}${renderSortableHeader(section.title, "price", "현재가", "price-cell num")}${renderSortableHeader(section.title, "value", "평가금", "value-cell num")}${renderSortableHeader(section.title, "profit", "손익", "profit-cell num")}${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}<th class="cycle-cell">배당주기</th><th class="dividend-per-payment-cell num">1회주당배당</th><th class="dividend-input-cell num">올해예상주당배당</th><th class="dividend-value-cell num">예상배당 / 수익률</th><th class="action-cell">가격갱신</th><th class="action-cell">삭제</th></tr></thead><tbody>${rows}</tbody></table></div>${sortedItems.length > HOLDINGS_PREVIEW_COUNT ? `<div class="btn-row holdings-toggle-row" style="margin-top:10px;"><button type="button" class="secondary holdings-toggle-btn" onclick="toggleAccountSection('${section.title}')">${isExpanded ? `▲ ${section.title} 접기` : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`}</button></div>` : ""}`}</div>`;
+
+        return `
+          <div class="account-section">
+            <div class="account-section-title">${section.title}</div>
+            ${sortedItems.length === 0 ? `<div class="empty-text">등록된 종목이 없어.</div>` : `
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th class="account-cell">계좌</th>
+                      <th class="asset-cell">자산군</th>
+                      <th class="name-cell">종목명</th>
+                      <th class="ticker-cell">티커</th>
+                      ${renderSortableHeader(section.title, "qty", "수량", "qty-cell")}
+                      ${renderSortableHeader(section.title, "buy", "총 매입금", "buy-cell num")}
+                      ${renderSortableHeader(section.title, "avg", "평균단가", "avg-cell num")}
+                      ${renderSortableHeader(section.title, "price", "현재가", "price-cell num")}
+                      ${renderSortableHeader(section.title, "value", "평가금", "value-cell num")}
+                      ${renderSortableHeader(section.title, "profit", "손익", "profit-cell num")}
+                      ${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}
+                      ${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}
+                      ${section.title !== "금현물계좌" ? `
+                        <th class="cycle-cell">배당주기</th>
+                        <th class="dividend-per-payment-cell num">1회주당배당</th>
+                        <th class="dividend-input-cell num">올해예상주당배당</th>
+                        <th class="dividend-value-cell num">예상배당 / 수익률</th>
+                      ` : ""}
+                      <th class="action-cell">가격갱신</th>
+                      <th class="action-cell">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+
+              ${sortedItems.length > HOLDINGS_PREVIEW_COUNT ? `
+                <div class="btn-row holdings-toggle-row" style="margin-top:10px;">
+                  <button type="button" class="secondary holdings-toggle-btn" onclick="toggleAccountSection('${section.title}')">
+                    ${isExpanded ? `▲ ${section.title} 접기` : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`}
+                  </button>
+                </div>
+              ` : ""}
+            `}
+          </div>`;
       }).join("");
     }
 
@@ -756,6 +828,7 @@
       btn.textContent = showAllTransactions ? "최근만 보기" : "전체보기";
       body.innerHTML = visible.map(t => `<tr><td>${esc(t.trade_date || "")}</td><td>${esc(t.account || "")}</td><td>${esc(t.name || "")}</td><td>${esc(t.ticker || "")}</td><td>${esc(t.trade_type || "매수")}</td><td class="num">${num(t.quantity).toLocaleString("ko-KR")}</td><td class="num">${won(t.unit_price)}</td><td class="num">${won(t.total_amount)}</td><td>${esc(t.memo || "")}</td><td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td></tr>`).join("");
     }
+
     function toggleTransactionsView() { showAllTransactions = !showAllTransactions; renderTransactions(); }
 
     function buildAssetTotals(items) {
@@ -931,6 +1004,7 @@
       document.getElementById("txTicker").value = "";
       autofillTransactionTickerFromName();
     });
+
     document.getElementById("txName").addEventListener("input", autofillTransactionTickerFromName);
 
     setDefaultTransactionDate();
@@ -942,4 +1016,3 @@
   </script>
 </body>
 </html>
-
