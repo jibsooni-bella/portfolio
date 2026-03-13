@@ -30,13 +30,13 @@
     .btn-row button { width: auto; min-width: 120px; }
 
     .summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-    .summary .item, .grid-4 .item, .account-summary-values .item {
+    .summary .item, .grid-4 .item, .account-summary-values .item, .chart-summary .item {
       background: #f8faff; border: 1px solid #e3ebff; border-radius: 14px; padding: 14px; min-width: 0;
     }
-    .summary .title, .account-summary-values .title, .grid-4 .title {
+    .summary .title, .account-summary-values .title, .grid-4 .title, .chart-summary .title {
       font-size: 13px; color: #667085; margin-bottom: 8px; font-weight: 700;
     }
-    .summary .value, .grid-4 .value {
+    .summary .value, .grid-4 .value, .chart-summary .value {
       font-size: clamp(18px, 2vw, 24px); font-weight: 800; line-height: 1.25;
       white-space: normal; word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
     }
@@ -257,9 +257,16 @@
       margin-top: 8px;
       line-height: 1.5;
     }
-    #tvChartHost {
+    .chart-canvas-wrap {
+      position: relative;
       width: 100%;
-      height: 390px;
+      height: 320px;
+      margin-bottom: 12px;
+    }
+    .chart-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
     }
     .range-row {
       display: flex;
@@ -284,7 +291,7 @@
     }
 
     @media (max-width: 900px) {
-      .grid, .grid-5, .grid-4, .summary, .grid-2 { grid-template-columns: 1fr; }
+      .grid, .grid-5, .grid-4, .summary, .grid-2, .chart-summary { grid-template-columns: 1fr; }
       h1 { font-size: 28px; }
       .btn-row button { width: 100%; }
       .account-summary-row { grid-template-columns: 1fr; }
@@ -299,7 +306,7 @@
       .holding-mobile-actions { flex-direction: column; }
 
       .symbol-chart-panel, .symbol-chart-view { padding: 12px; }
-      #tvChartHost { height: 320px; }
+      .chart-canvas-wrap { height: 280px; }
     }
   </style>
 </head>
@@ -391,7 +398,7 @@
 
           <div style="margin-top:10px;">
             <label for="chartTickerInput">티커 직접입력</label>
-            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750 / 133690" />
+            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750 / 133690.KS" />
           </div>
 
           <div class="range-row">
@@ -409,12 +416,20 @@
             보유종목 선택 또는 티커 입력 후 차트를 불러와줘.
           </div>
           <div class="inline-note">
-            한국 ETF는 숫자 6자리 또는 .KS/.KQ 형식 티커를 넣으면 자동으로 KRX 형식으로 변환해 시도해.
+            차트는 Worker의 히스토리 응답을 사용해 직접 그려. 한국 티커는 .KS/.KQ 포함 입력도 가능해.
           </div>
         </div>
 
         <div class="symbol-chart-view">
-          <div id="tvChartHost"></div>
+          <div class="chart-canvas-wrap">
+            <canvas id="symbolHistoryChart"></canvas>
+          </div>
+          <div class="chart-summary">
+            <div class="item"><div class="title">시작가</div><div class="value" id="chartStartPrice">-</div></div>
+            <div class="item"><div class="title">현재가</div><div class="value" id="chartEndPrice">-</div></div>
+            <div class="item"><div class="title">기간수익률</div><div class="value" id="chartReturnRate">-</div></div>
+            <div class="item"><div class="title">최고 / 최저</div><div class="value" id="chartHighLow">-</div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -529,6 +544,7 @@
     let isaAssetChart = null;
     let pensionAssetChart = null;
     let monthlyChart = null;
+    let symbolHistoryChart = null;
 
     let expandedAccounts = { "ISA": false, "연금저축": false, "금현물계좌": false };
     let holdingsSortState = {
@@ -538,7 +554,6 @@
     };
 
     let selectedChartRange = "12M";
-    let tradingViewScriptPromise = null;
 
     const HOLDINGS_PREVIEW_COUNT = 5;
     const EPSILON = 0.000001;
@@ -1882,31 +1897,7 @@
     }
 
     function normalizeChartInputTicker(rawTicker = "") {
-      const raw = String(rawTicker || "").trim().toUpperCase();
-      if (!raw) return "";
-
-      const koreaMatch = raw.match(/^(\d{6})\.(KS|KQ)$/);
-      if (koreaMatch) return koreaMatch[1];
-
-      return raw;
-    }
-
-    function buildChartSymbol(rawTicker = "") {
-      const raw = String(rawTicker || "").trim().toUpperCase();
-      if (!raw) return "";
-
-      if (raw === "KRX-GOLD") return "TVC:GOLD";
-
-      const koreaMatch = raw.match(/^(\d{6})\.(KS|KQ)$/);
-      if (koreaMatch) {
-        return `KRX:${koreaMatch[1]}`;
-      }
-
-      if (/^\d{6}$/.test(raw)) {
-        return `KRX:${raw}`;
-      }
-
-      return raw;
+      return String(rawTicker || "").trim().toUpperCase();
     }
 
     function setChartRange(range, btnEl) {
@@ -1915,60 +1906,155 @@
       if (btnEl) btnEl.classList.add("active");
     }
 
-    async function ensureTradingViewScript() {
-      if (window.TradingView) return;
-      if (tradingViewScriptPromise) return tradingViewScriptPromise;
+    function extractHistoryPoints(payload) {
+      let rawItems = [];
 
-      tradingViewScriptPromise = new Promise((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://s3.tradingview.com/tv.js";
-        script.onload = resolve;
-        script.onerror = () => reject(new Error("차트 스크립트를 불러오지 못했어."));
-        document.head.appendChild(script);
-      });
+      if (Array.isArray(payload)) rawItems = payload;
+      else if (Array.isArray(payload.prices)) rawItems = payload.prices;
+      else if (Array.isArray(payload.history)) rawItems = payload.history;
+      else if (Array.isArray(payload.items)) rawItems = payload.items;
+      else if (Array.isArray(payload.data)) rawItems = payload.data;
 
-      return tradingViewScriptPromise;
+      return rawItems.map(item => {
+        const date = item.date || item.trade_date || item.dt || item.timestamp || item.time || "";
+        const close = Number(
+          item.close ??
+          item.price ??
+          item.value ??
+          item.adjClose ??
+          item.adj_close ??
+          0
+        );
+        return { date: String(date), close };
+      }).filter(item => item.date && Number.isFinite(item.close) && item.close > 0);
+    }
+
+    async function fetchHistoryFromWorker(ticker, range) {
+      const url = `${WORKER_URL}?ticker=${encodeURIComponent(ticker)}&type=history&range=${encodeURIComponent(range)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`히스토리 조회 실패 (${res.status})`);
+      return res.json();
+    }
+
+    function clearSymbolChartSummary() {
+      document.getElementById("chartStartPrice").textContent = "-";
+      document.getElementById("chartEndPrice").textContent = "-";
+      document.getElementById("chartReturnRate").textContent = "-";
+      document.getElementById("chartReturnRate").className = "value";
+      document.getElementById("chartHighLow").textContent = "-";
     }
 
     function updateChartCurrentText(symbolText) {
       document.getElementById("chartCurrentSymbolText").textContent = "현재 선택: " + (symbolText || "-");
     }
 
+    function renderSymbolHistoryChart(points, labelText) {
+      const canvas = document.getElementById("symbolHistoryChart");
+      const ctx = canvas.getContext("2d");
+
+      const labels = points.map(p => p.date);
+      const prices = points.map(p => p.close);
+
+      if (symbolHistoryChart) symbolHistoryChart.destroy();
+
+      symbolHistoryChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: labelText,
+            data: prices,
+            tension: 0.15,
+            pointRadius: 0,
+            borderWidth: 2,
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: "index",
+            intersect: false
+          },
+          scales: {
+            x: {
+              ticks: {
+                maxTicksLimit: 8
+              }
+            },
+            y: {
+              ticks: {
+                callback: value => Number(value).toLocaleString("ko-KR")
+              }
+            }
+          },
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString("ko-KR")}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderHistorySummary(points) {
+      if (!points.length) {
+        clearSymbolChartSummary();
+        return;
+      }
+
+      const prices = points.map(p => p.close);
+      const start = prices[0];
+      const end = prices[prices.length - 1];
+      const high = Math.max(...prices);
+      const low = Math.min(...prices);
+      const rate = start > 0 ? ((end - start) / start) * 100 : 0;
+
+      document.getElementById("chartStartPrice").textContent = won(start);
+      document.getElementById("chartEndPrice").textContent = won(end);
+      document.getElementById("chartReturnRate").textContent = pct(rate);
+      document.getElementById("chartReturnRate").className = "value " + (rate >= 0 ? "profit" : "loss");
+      document.getElementById("chartHighLow").textContent = `${won(high)} / ${won(low)}`;
+    }
+
     async function loadSymbolChart() {
       const tickerInput = document.getElementById("chartTickerInput");
-      const normalizedTicker = normalizeChartInputTicker(tickerInput.value);
-      if (!normalizedTicker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
+      const ticker = normalizeChartInputTicker(tickerInput.value);
+      if (!ticker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
 
-      tickerInput.value = normalizedTicker;
-      const symbol = buildChartSymbol(normalizedTicker);
+      tickerInput.value = ticker;
+      updateChartCurrentText(ticker);
+
       const status = document.getElementById("chartStatusText");
-      const host = document.getElementById("tvChartHost");
-
-      status.textContent = `차트 불러오는 중: ${symbol}`;
-      updateChartCurrentText(symbol);
+      status.textContent = `차트 불러오는 중: ${ticker} / 기간 ${selectedChartRange}`;
 
       try {
-        await ensureTradingViewScript();
-        host.innerHTML = '<div id="tvChartInner" style="width:100%;height:100%;"></div>';
+        const payload = await fetchHistoryFromWorker(ticker, selectedChartRange);
+        const points = extractHistoryPoints(payload);
 
-        new TradingView.widget({
-          autosize: true,
-          symbol,
-          interval: "D",
-          timezone: "Asia/Seoul",
-          theme: "light",
-          style: "1",
-          locale: "kr",
-          range: selectedChartRange,
-          allow_symbol_change: false,
-          hide_side_toolbar: true,
-          hide_top_toolbar: false,
-          withdateranges: true,
-          container_id: "tvChartInner"
-        });
+        if (!points.length) {
+          if (symbolHistoryChart) {
+            symbolHistoryChart.destroy();
+            symbolHistoryChart = null;
+          }
+          clearSymbolChartSummary();
+          status.textContent = "차트 데이터가 없어. Worker 히스토리 응답 형식을 확인해줘.";
+          return;
+        }
 
-        status.textContent = `차트 표시 중: ${symbol} / 기간 ${selectedChartRange}`;
+        renderSymbolHistoryChart(points, ticker);
+        renderHistorySummary(points);
+        status.textContent = `차트 표시 중: ${ticker} / 기간 ${selectedChartRange} / 데이터 ${points.length}건`;
       } catch (err) {
+        if (symbolHistoryChart) {
+          symbolHistoryChart.destroy();
+          symbolHistoryChart = null;
+        }
+        clearSymbolChartSummary();
         status.textContent = "차트 로딩 실패: " + err.message;
       }
     }
@@ -1999,13 +2085,13 @@
     document.getElementById("chartHoldingSelect").addEventListener("change", (e) => {
       const raw = e.target.value;
       if (!raw) return;
-
       const [, , ticker] = raw.split("||");
       document.getElementById("chartTickerInput").value = normalizeChartInputTicker(ticker || "");
     });
 
     setDefaultTransactionDate();
     ensureAccountTargets();
+    clearSymbolChartSummary();
     reloadAllData().catch(err => {
       alert("초기 불러오기 실패: " + err.message + "\n\nmonthly_investments / account_targets 테이블 생성 여부도 확인해줘.");
       console.error(err);
