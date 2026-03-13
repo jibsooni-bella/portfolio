@@ -391,7 +391,7 @@
 
           <div style="margin-top:10px;">
             <label for="chartTickerInput">티커 직접입력</label>
-            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750" />
+            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750 / 133690" />
           </div>
 
           <div class="range-row">
@@ -409,7 +409,7 @@
             보유종목 선택 또는 티커 입력 후 차트를 불러와줘.
           </div>
           <div class="inline-note">
-            한국 ETF는 숫자 6자리 티커를 넣으면 자동으로 KRX 형식으로 시도해. 일부 종목은 데이터 공급원 심볼 형식에 따라 차트가 바로 안 뜰 수도 있어.
+            한국 ETF는 숫자 6자리 또는 .KS/.KQ 형식 티커를 넣으면 자동으로 KRX 형식으로 변환해 시도해.
           </div>
         </div>
 
@@ -1881,12 +1881,32 @@
       }).join("");
     }
 
+    function normalizeChartInputTicker(rawTicker = "") {
+      const raw = String(rawTicker || "").trim().toUpperCase();
+      if (!raw) return "";
+
+      const koreaMatch = raw.match(/^(\d{6})\.(KS|KQ)$/);
+      if (koreaMatch) return koreaMatch[1];
+
+      return raw;
+    }
+
     function buildChartSymbol(rawTicker = "") {
-      const ticker = String(rawTicker || "").trim().toUpperCase();
-      if (!ticker) return "";
-      if (ticker === "KRX-GOLD") return "TVC:GOLD";
-      if (/^\d{6}$/.test(ticker)) return `KRX:${ticker}`;
-      return ticker;
+      const raw = String(rawTicker || "").trim().toUpperCase();
+      if (!raw) return "";
+
+      if (raw === "KRX-GOLD") return "TVC:GOLD";
+
+      const koreaMatch = raw.match(/^(\d{6})\.(KS|KQ)$/);
+      if (koreaMatch) {
+        return `KRX:${koreaMatch[1]}`;
+      }
+
+      if (/^\d{6}$/.test(raw)) {
+        return `KRX:${raw}`;
+      }
+
+      return raw;
     }
 
     function setChartRange(range, btnEl) {
@@ -1916,10 +1936,11 @@
 
     async function loadSymbolChart() {
       const tickerInput = document.getElementById("chartTickerInput");
-      const rawTicker = tickerInput.value.trim();
-      if (!rawTicker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
+      const normalizedTicker = normalizeChartInputTicker(tickerInput.value);
+      if (!normalizedTicker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
 
-      const symbol = buildChartSymbol(rawTicker);
+      tickerInput.value = normalizedTicker;
+      const symbol = buildChartSymbol(normalizedTicker);
       const status = document.getElementById("chartStatusText");
       const host = document.getElementById("tvChartHost");
 
@@ -1978,8 +1999,9 @@
     document.getElementById("chartHoldingSelect").addEventListener("change", (e) => {
       const raw = e.target.value;
       if (!raw) return;
+
       const [, , ticker] = raw.split("||");
-      document.getElementById("chartTickerInput").value = ticker || "";
+      document.getElementById("chartTickerInput").value = normalizeChartInputTicker(ticker || "");
     });
 
     setDefaultTransactionDate();
