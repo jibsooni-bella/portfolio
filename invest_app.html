@@ -124,8 +124,163 @@
     .sort-indicator { margin-left: 4px; color: #2f6fed; font-size: 12px; }
     .account-panel-title { font-size: 20px; font-weight: 800; margin: 0 0 12px; }
 
+    .holdings-desktop { display: block; }
+    .holdings-mobile { display: none; }
+
+    .holding-mobile-list { display: flex; flex-direction: column; gap: 12px; }
+    .holding-mobile-card {
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      background: #fcfdff;
+      overflow: hidden;
+    }
+    .holding-mobile-card summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px;
+    }
+    .holding-mobile-card summary::-webkit-details-marker { display: none; }
+
+    .holding-mobile-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .holding-mobile-name {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.35;
+      word-break: keep-all;
+    }
+    .holding-mobile-ticker {
+      font-size: 12px;
+      color: #667085;
+      margin-top: 3px;
+    }
+    .holding-mobile-rate {
+      font-size: 16px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .holding-mobile-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .holding-mobile-chip {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475467;
+      background: #f2f4f7;
+      border: 1px solid #e4e7ec;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+    .holding-mobile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .holding-mobile-stat {
+      background: #f8faff;
+      border: 1px solid #e3ebff;
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .holding-mobile-stat .label {
+      font-size: 12px;
+      color: #667085;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+    .holding-mobile-stat .value {
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.35;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums;
+    }
+    .holding-mobile-detail {
+      border-top: 1px solid #eceff5;
+      padding: 14px;
+      background: #fff;
+    }
+    .holding-mobile-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .holding-mobile-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .holding-mobile-actions button {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .inline-note {
+      font-size: 12px;
+      color: #667085;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .symbol-chart-wrap {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    .symbol-chart-panel {
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      background: #fcfdff;
+      padding: 14px;
+    }
+    .symbol-chart-view {
+      border: 1px solid #e7eefc;
+      border-radius: 14px;
+      background: #fff;
+      padding: 12px;
+      min-height: 420px;
+    }
+    .symbol-chart-status {
+      font-size: 13px;
+      color: #667085;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    #tvChartHost {
+      width: 100%;
+      height: 390px;
+    }
+    .range-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .range-row button {
+      width: auto;
+      min-width: 68px;
+      padding: 8px 10px;
+    }
+    .range-row button.active {
+      background: #2f6fed;
+      color: #fff;
+      border: none;
+    }
+
     @media (max-width: 1100px) {
       .grid-3 { grid-template-columns: 1fr; }
+      .symbol-chart-wrap { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 900px) {
@@ -135,8 +290,16 @@
       .account-summary-row { grid-template-columns: 1fr; }
       .account-summary-name { padding-top: 0; }
       .account-summary-values { grid-template-columns: 1fr; }
-      .holdings-table.standard { min-width: 1900px; }
-      .holdings-table.gold-only { min-width: 1280px; }
+
+      .holdings-desktop { display: none; }
+      .holdings-mobile { display: block; }
+
+      .holding-mobile-edit-grid { grid-template-columns: 1fr; }
+      .holding-mobile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .holding-mobile-actions { flex-direction: column; }
+
+      .symbol-chart-panel, .symbol-chart-view { padding: 12px; }
+      #tvChartHost { height: 320px; }
     }
   </style>
 </head>
@@ -211,6 +374,50 @@
     </div>
 
     <div class="card"><h2>보유 종목</h2><div id="holdingsSections"></div></div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>종목 차트 조회</h2>
+        <div class="section-meta" id="chartCurrentSymbolText">현재 선택: -</div>
+      </div>
+      <div class="symbol-chart-wrap">
+        <div class="symbol-chart-panel">
+          <div>
+            <label for="chartHoldingSelect">보유종목 빠른선택</label>
+            <select id="chartHoldingSelect">
+              <option value="">보유종목 선택</option>
+            </select>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label for="chartTickerInput">티커 직접입력</label>
+            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750" />
+          </div>
+
+          <div class="range-row">
+            <button type="button" class="secondary active" onclick="setChartRange('12M', this)">1년</button>
+            <button type="button" class="secondary" onclick="setChartRange('36M', this)">3년</button>
+            <button type="button" class="secondary" onclick="setChartRange('60M', this)">5년</button>
+            <button type="button" class="secondary" onclick="setChartRange('MAX', this)">전체</button>
+          </div>
+
+          <div class="btn-row">
+            <button onclick="loadSymbolChart()">차트 불러오기</button>
+          </div>
+
+          <div class="symbol-chart-status" id="chartStatusText">
+            보유종목 선택 또는 티커 입력 후 차트를 불러와줘.
+          </div>
+          <div class="inline-note">
+            한국 ETF는 숫자 6자리 티커를 넣으면 자동으로 KRX 형식으로 시도해. 일부 종목은 데이터 공급원 심볼 형식에 따라 차트가 바로 안 뜰 수도 있어.
+          </div>
+        </div>
+
+        <div class="symbol-chart-view">
+          <div id="tvChartHost"></div>
+        </div>
+      </div>
+    </div>
 
     <div class="card">
       <div class="section-head">
@@ -329,6 +536,9 @@
       "연금저축": { key: "value", order: "desc" },
       "금현물계좌": { key: "value", order: "desc" }
     };
+
+    let selectedChartRange = "12M";
+    let tradingViewScriptPromise = null;
 
     const HOLDINGS_PREVIEW_COUNT = 5;
     const EPSILON = 0.000001;
@@ -475,6 +685,7 @@
       await Promise.all([loadMonthlyInvestmentsFromSupabase(), loadAccountTargetsFromSupabase()]);
       applySavedTargetsToInputs();
       updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
       setDefaultTransactionDate();
       setLastUpdateText();
       render();
@@ -897,6 +1108,7 @@
       ["txName", "txTicker", "txQty", "txUnitPrice", "txMemo"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("txTradeType").value = "매수";
       updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
       setDefaultTransactionDate();
       setLastUpdateText();
       render();
@@ -922,6 +1134,7 @@
       if (!synced) return;
 
       await syncMonthlyInvestmentFromTransaction(tx, -1);
+      syncChartHoldingOptions();
       setLastUpdateText();
       render();
     }
@@ -955,6 +1168,8 @@
       const { error } = await db.from("holdings").update(updatePayload).eq("id", id);
       if (error) return alert("수정 저장 실패: " + error.message);
 
+      updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
       render();
     }
 
@@ -1158,6 +1373,158 @@
       }).join("");
     }
 
+    function getMobileCards(accountItems, totalPortfolioValue, accountName) {
+      return accountItems.map(h => {
+        const isGoldAccount = accountName === "금현물계좌";
+        const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
+        const value = num(h.qty) * num(h.price);
+        const profit = value - num(h.buy);
+        const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
+        const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
+        const cycle = h.dividendCycle || "직접입력";
+        const dividendPerPayment = num(h.dividendPerPayment);
+        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
+        const fallbackYield = num(h.dividendYield);
+        const yearlyDividend = expectedDividendPerShare > 0 ? num(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
+        const derivedDividendYield = expectedDividendPerShare > 0
+          ? (num(h.price) > 0 ? (expectedDividendPerShare / num(h.price)) * 100 : 0)
+          : fallbackYield;
+        const updateButtonLabel = isManualGold(h) ? "수동" : "가격갱신";
+
+        return `
+          <details class="holding-mobile-card">
+            <summary>
+              <div class="holding-mobile-top">
+                <div>
+                  <div class="holding-mobile-name">${esc(h.name)}</div>
+                  <div class="holding-mobile-ticker">${esc(h.ticker || "-")}</div>
+                </div>
+                <div class="holding-mobile-rate ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</div>
+              </div>
+
+              <div class="holding-mobile-meta">
+                <span class="holding-mobile-chip">${esc(h.account)}</span>
+                <span class="holding-mobile-chip">${esc(h.assetType)}</span>
+                <span class="holding-mobile-chip">수량 ${num(h.qty).toLocaleString("ko-KR")}</span>
+              </div>
+
+              <div class="holding-mobile-grid">
+                <div class="holding-mobile-stat">
+                  <div class="label">매입금</div>
+                  <div class="value">${won(h.buy)}</div>
+                </div>
+                <div class="holding-mobile-stat">
+                  <div class="label">평가금</div>
+                  <div class="value">${won(value)}</div>
+                </div>
+                <div class="holding-mobile-stat">
+                  <div class="label">손익</div>
+                  <div class="value ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</div>
+                </div>
+                <div class="holding-mobile-stat">
+                  <div class="label">현재가</div>
+                  <div class="value">${won(h.price)}</div>
+                </div>
+              </div>
+            </summary>
+
+            <div class="holding-mobile-detail">
+              <div class="holding-mobile-edit-grid">
+                <div>
+                  <label>계좌</label>
+                  <select onchange="updateField(${h.id}, 'account', this.value)">
+                    <option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option>
+                    <option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option>
+                    <option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option>
+                  </select>
+                </div>
+                <div>
+                  <label>자산군</label>
+                  <select onchange="updateField(${h.id}, 'assetType', this.value)">
+                    <option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option>
+                    <option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option>
+                    <option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option>
+                    <option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option>
+                    <option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option>
+                  </select>
+                </div>
+                <div>
+                  <label>종목명</label>
+                  <input value="${esc(h.name)}" onchange="updateField(${h.id}, 'name', this.value)" />
+                </div>
+                <div>
+                  <label>티커</label>
+                  <input value="${esc(h.ticker || "")}" onchange="updateField(${h.id}, 'ticker', this.value)" />
+                </div>
+                <div>
+                  <label>수량</label>
+                  <input type="number" step="any" value="${num(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" />
+                </div>
+                <div>
+                  <label>총 매입금</label>
+                  <input type="number" step="any" value="${num(h.buy)}" onchange="updateField(${h.id}, 'buy', this.value)" />
+                </div>
+                <div>
+                  <label>평균단가</label>
+                  <input value="${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}" readonly />
+                </div>
+                <div>
+                  <label>현재가</label>
+                  <input type="number" step="any" value="${num(h.price)}" onchange="updateField(${h.id}, 'price', this.value)" />
+                </div>
+                <div>
+                  <label>평가금</label>
+                  <input value="${won(value)}" readonly />
+                </div>
+                <div>
+                  <label>보유비중</label>
+                  <input value="${pct(weight)}" readonly />
+                </div>
+                <div>
+                  <label>손익</label>
+                  <input value="${won(profit)}" readonly />
+                </div>
+                <div>
+                  <label>수익률</label>
+                  <input value="${pct(rate)}" readonly />
+                </div>
+
+                ${!isGoldAccount ? `
+                  <div>
+                    <label>배당주기</label>
+                    <select onchange="updateField(${h.id}, 'dividendCycle', this.value)">
+                      <option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option>
+                      <option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option>
+                      <option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option>
+                      <option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option>
+                      <option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>1회주당배당</label>
+                    <input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" />
+                  </div>
+                  <div>
+                    <label>올해예상주당배당</label>
+                    <input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" />
+                  </div>
+                  <div>
+                    <label>예상배당 / 수익률</label>
+                    <input value="${won(yearlyDividend)} / ${pct(derivedDividendYield)}" readonly />
+                  </div>
+                ` : ""}
+              </div>
+
+              <div class="holding-mobile-actions">
+                <button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button>
+                <button class="danger" onclick="deleteHolding(${h.id})">삭제</button>
+              </div>
+            </div>
+          </details>
+        `;
+      }).join("");
+    }
+
     function renderSortableHeader(accountName, key, label, className = "") {
       return `<th class="${className} sortable" onclick="setHoldingsSort('${accountName}', '${key}')">${label}${getSortIndicator(accountName, key)}</th>`;
     }
@@ -1178,41 +1545,48 @@
         const isExpanded = expandedAccounts[section.title];
         const visibleItems = isExpanded ? sortedItems : sortedItems.slice(0, HOLDINGS_PREVIEW_COUNT);
         const rows = getTableRows(visibleItems, totalPortfolioValue, section.title);
+        const mobileCards = getMobileCards(visibleItems, totalPortfolioValue, section.title);
         const hiddenCount = Math.max(sortedItems.length - HOLDINGS_PREVIEW_COUNT, 0);
 
         return `
           <div class="account-section">
             <div class="account-section-title">${section.title}</div>
             ${sortedItems.length === 0 ? `<div class="empty-text">등록된 종목이 없어.</div>` : `
-              <div class="table-wrap">
-                <table class="holdings-table ${isGoldAccount ? "gold-only" : "standard"}">
-                  ${renderHoldingsColGroup(isGoldAccount)}
-                  <thead>
-                    <tr>
-                      <th class="account-cell">계좌</th>
-                      <th class="asset-cell">자산군</th>
-                      <th class="name-cell">종목명</th>
-                      <th class="ticker-cell">티커</th>
-                      ${renderSortableHeader(section.title, "qty", "수량", "qty-cell")}
-                      ${renderSortableHeader(section.title, "buy", "총 매입금", "buy-cell num")}
-                      ${renderSortableHeader(section.title, "avg", "평균단가", "avg-cell num")}
-                      ${renderSortableHeader(section.title, "price", "현재가", "price-cell num")}
-                      ${renderSortableHeader(section.title, "value", "평가금", "value-cell num")}
-                      ${renderSortableHeader(section.title, "profit", "손익", "profit-cell num")}
-                      ${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}
-                      ${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}
-                      ${!isGoldAccount ? `
-                        <th class="cycle-cell">배당주기</th>
-                        <th class="dividend-per-payment-cell num">1회주당배당</th>
-                        <th class="dividend-input-cell num">올해예상주당배당</th>
-                        <th class="dividend-value-cell num">예상배당 / 수익률</th>
-                      ` : ""}
-                      <th class="action-cell">가격갱신</th>
-                      <th class="action-cell">삭제</th>
-                    </tr>
-                  </thead>
-                  <tbody>${rows}</tbody>
-                </table>
+              <div class="holdings-desktop">
+                <div class="table-wrap">
+                  <table class="holdings-table ${isGoldAccount ? "gold-only" : "standard"}">
+                    ${renderHoldingsColGroup(isGoldAccount)}
+                    <thead>
+                      <tr>
+                        <th class="account-cell">계좌</th>
+                        <th class="asset-cell">자산군</th>
+                        <th class="name-cell">종목명</th>
+                        <th class="ticker-cell">티커</th>
+                        ${renderSortableHeader(section.title, "qty", "수량", "qty-cell")}
+                        ${renderSortableHeader(section.title, "buy", "총 매입금", "buy-cell num")}
+                        ${renderSortableHeader(section.title, "avg", "평균단가", "avg-cell num")}
+                        ${renderSortableHeader(section.title, "price", "현재가", "price-cell num")}
+                        ${renderSortableHeader(section.title, "value", "평가금", "value-cell num")}
+                        ${renderSortableHeader(section.title, "profit", "손익", "profit-cell num")}
+                        ${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}
+                        ${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}
+                        ${!isGoldAccount ? `
+                          <th class="cycle-cell">배당주기</th>
+                          <th class="dividend-per-payment-cell num">1회주당배당</th>
+                          <th class="dividend-input-cell num">올해예상주당배당</th>
+                          <th class="dividend-value-cell num">예상배당 / 수익률</th>
+                        ` : ""}
+                        <th class="action-cell">가격갱신</th>
+                        <th class="action-cell">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="holdings-mobile">
+                <div class="holding-mobile-list">${mobileCards}</div>
               </div>
 
               ${sortedItems.length > HOLDINGS_PREVIEW_COUNT ? `
@@ -1492,6 +1866,92 @@
       });
     }
 
+    function syncChartHoldingOptions() {
+      const select = document.getElementById("chartHoldingSelect");
+      if (!select) return;
+
+      const items = [...holdings].sort((a, b) => {
+        if (a.account !== b.account) return a.account.localeCompare(b.account, "ko");
+        return a.name.localeCompare(b.name, "ko");
+      });
+
+      select.innerHTML = `<option value="">보유종목 선택</option>` + items.map(h => {
+        const raw = `${h.account}||${h.name}||${h.ticker || ""}`;
+        return `<option value="${esc(raw)}">${esc(h.account)} · ${esc(h.name)}${h.ticker ? ` (${esc(h.ticker)})` : ""}</option>`;
+      }).join("");
+    }
+
+    function buildChartSymbol(rawTicker = "") {
+      const ticker = String(rawTicker || "").trim().toUpperCase();
+      if (!ticker) return "";
+      if (ticker === "KRX-GOLD") return "TVC:GOLD";
+      if (/^\d{6}$/.test(ticker)) return `KRX:${ticker}`;
+      return ticker;
+    }
+
+    function setChartRange(range, btnEl) {
+      selectedChartRange = range;
+      document.querySelectorAll(".range-row button").forEach(btn => btn.classList.remove("active"));
+      if (btnEl) btnEl.classList.add("active");
+    }
+
+    async function ensureTradingViewScript() {
+      if (window.TradingView) return;
+      if (tradingViewScriptPromise) return tradingViewScriptPromise;
+
+      tradingViewScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://s3.tradingview.com/tv.js";
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("차트 스크립트를 불러오지 못했어."));
+        document.head.appendChild(script);
+      });
+
+      return tradingViewScriptPromise;
+    }
+
+    function updateChartCurrentText(symbolText) {
+      document.getElementById("chartCurrentSymbolText").textContent = "현재 선택: " + (symbolText || "-");
+    }
+
+    async function loadSymbolChart() {
+      const tickerInput = document.getElementById("chartTickerInput");
+      const rawTicker = tickerInput.value.trim();
+      if (!rawTicker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
+
+      const symbol = buildChartSymbol(rawTicker);
+      const status = document.getElementById("chartStatusText");
+      const host = document.getElementById("tvChartHost");
+
+      status.textContent = `차트 불러오는 중: ${symbol}`;
+      updateChartCurrentText(symbol);
+
+      try {
+        await ensureTradingViewScript();
+        host.innerHTML = '<div id="tvChartInner" style="width:100%;height:100%;"></div>';
+
+        new TradingView.widget({
+          autosize: true,
+          symbol,
+          interval: "D",
+          timezone: "Asia/Seoul",
+          theme: "light",
+          style: "1",
+          locale: "kr",
+          range: selectedChartRange,
+          allow_symbol_change: false,
+          hide_side_toolbar: true,
+          hide_top_toolbar: false,
+          withdateranges: true,
+          container_id: "tvChartInner"
+        });
+
+        status.textContent = `차트 표시 중: ${symbol} / 기간 ${selectedChartRange}`;
+      } catch (err) {
+        status.textContent = "차트 로딩 실패: " + err.message;
+      }
+    }
+
     function render() {
       renderSummary();
       renderAccountSummary();
@@ -1504,6 +1964,7 @@
       renderMonthlyTable();
       renderMonthlyChart();
       updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
     }
 
     document.getElementById("txAccount").addEventListener("change", () => {
@@ -1513,6 +1974,13 @@
     });
 
     document.getElementById("txName").addEventListener("input", autofillTransactionTickerFromName);
+
+    document.getElementById("chartHoldingSelect").addEventListener("change", (e) => {
+      const raw = e.target.value;
+      if (!raw) return;
+      const [, , ticker] = raw.split("||");
+      document.getElementById("chartTickerInput").value = ticker || "";
+    });
 
     setDefaultTransactionDate();
     ensureAccountTargets();
