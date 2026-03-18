@@ -575,7 +575,7 @@
     }
 
     function won(n) {
-      return intWon(n).toLocaleString("ko-KR") + "원";
+      return Math.round(num(n)).toLocaleString("ko-KR") + "원";
     }
 
     function pct(n) {
@@ -1146,11 +1146,7 @@
 
       ["txName","txTicker","txQty","txUnitPrice","txMemo"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("txTradeType").value = "매수";
-      updateTransactionNameSuggestions();
-      syncChartHoldingOptions();
-      setDefaultTransactionDate();
-      setLastUpdateText();
-      render();
+      return;
     }
 
     async function deleteHolding() {
@@ -1172,9 +1168,8 @@
       if (!synced) return;
 
       await syncMonthlyInvestmentFromTransaction(tx, -1);
-      syncChartHoldingOptions();
-      setLastUpdateText();
-      render();
+      await reloadAllData();
+      return;
     }
 
     async function updateField(id, field, value) {
