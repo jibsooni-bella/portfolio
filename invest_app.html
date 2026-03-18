@@ -1146,6 +1146,7 @@
 
       ["txName","txTicker","txQty","txUnitPrice","txMemo"].forEach(id => document.getElementById(id).value = "");
       document.getElementById("txTradeType").value = "매수";
+      await reloadAllData();
       return;
     }
 
