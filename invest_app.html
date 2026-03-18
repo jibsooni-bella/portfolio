@@ -116,10 +116,6 @@
       outline: none;
     }
 
-    .field.span-2 {
-      grid-column: span 2;
-    }
-
     .row2 {
       margin-top: 12px;
       display: grid;
@@ -239,8 +235,6 @@
       opacity: 0.55;
       background: #fafafa;
     }
-
-    .mobile-only { display: none; }
 
     canvas {
       width: 100% !important;
@@ -450,6 +444,7 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let transactions = [];
+    let holdings = [];
     let quoteMap = {};
     let allocationChart = null;
 
@@ -493,11 +488,10 @@
     }
 
     function normalizeTransaction(txn) {
-      const normalizedAction = txn.trade_type === "매도" ? "SELL" : "BUY";
       return {
         ...txn,
         account_type: txn.account || "일반",
-        action: normalizedAction,
+        action: txn.trade_type === "매도" ? "SELL" : "BUY",
         quantity: toInt(txn.qty),
         unit_price: toInt(txn.price),
         fee: toInt(txn.fee),
@@ -505,94 +499,25 @@
       };
     }
 
-    function txnAmount(txn) {
-      return toInt(txn.quantity) * toInt(txn.unit_price) + toInt(txn.fee);
+    function normalizeHolding(row) {
+      return {
+        ...row,
+        account_type: row.account || "일반",
+        asset_type: row.assetType || "",
+        name: row.name || "",
+        ticker: row.ticker || "",
+        quantity: toInt(row.qty),
+        total_cost: toInt(row.buy),
+        avg_price: toInt(row.price),
+        dividend_yield: Number(row.dividendYield || 0),
+        expected_dividend_per_share: Number(row.expectedDividendPerShare || 0),
+        dividend_cycle: row.dividendCycle || "직접입력",
+        dividend_per_payment: Number(row.dividendPerPayment || 0)
+      };
     }
 
-    function deriveHoldingsFromTransactions(sourceTransactions) {
-      const activeTxns = [...sourceTransactions]
-        .filter(t => !t.is_rolled_back)
-        .sort((a, b) => {
-          const ad = new Date(`${a.trade_date}T00:00:00`).getTime();
-          const bd = new Date(`${b.trade_date}T00:00:00`).getTime();
-          if (ad !== bd) return ad - bd;
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        });
-
-      const map = new Map();
-
-      for (const txn of activeTxns) {
-        const account = txn.account_type || "일반";
-        const ticker = (txn.ticker || "").trim();
-        const name = (txn.name || "").trim();
-        const key = `${account}__${ticker}__${name}`;
-
-        if (!map.has(key)) {
-          map.set(key, {
-            account_type: account,
-            ticker,
-            name,
-            quantity: 0,
-            total_cost: 0
-          });
-        }
-
-        const item = map.get(key);
-        const qty = toInt(txn.quantity);
-        const unitPrice = toInt(txn.unit_price);
-        const fee = toInt(txn.fee);
-        const grossAmount = qty * unitPrice;
-        const totalAmount = grossAmount + fee;
-
-        if (txn.action === "BUY") {
-          item.quantity += qty;
-          item.total_cost += totalAmount;
-        }
-
-        if (txn.action === "SELL") {
-          if (qty <= 0 || item.quantity <= 0) continue;
-
-          const sellQty = Math.min(qty, item.quantity);
-          const beforeQty = item.quantity;
-          const beforeCost = item.total_cost;
-
-          let costToRemove = 0;
-          if (sellQty >= beforeQty) {
-            costToRemove = beforeCost;
-          } else {
-            costToRemove = Math.round((beforeCost * sellQty) / beforeQty);
-          }
-
-          item.quantity = beforeQty - sellQty;
-          item.total_cost = beforeCost - costToRemove;
-
-          if (item.quantity <= 0) {
-            item.quantity = 0;
-            item.total_cost = 0;
-          }
-          if (item.total_cost < 0) item.total_cost = 0;
-        }
-      }
-
-      return [...map.values()]
-        .filter(item => item.quantity > 0)
-        .map(item => {
-          const currentPrice = toInt(quoteMap[item.ticker]?.price || 0);
-          const marketValue = item.quantity * currentPrice;
-          const pnl = marketValue - item.total_cost;
-          const returnRate = item.total_cost > 0 ? (pnl / item.total_cost) * 100 : 0;
-          const avgPrice = item.quantity > 0 ? Math.round(item.total_cost / item.quantity) : 0;
-
-          return {
-            ...item,
-            current_price: currentPrice,
-            market_value: marketValue,
-            pnl,
-            return_rate: returnRate,
-            avg_price: avgPrice
-          };
-        })
-        .sort((a, b) => b.market_value - a.market_value);
+    function txnAmount(txn) {
+      return toInt(txn.quantity) * toInt(txn.unit_price) + toInt(txn.fee);
     }
 
     async function loadTransactions() {
@@ -609,6 +534,21 @@
       }
 
       transactions = (data || []).map(normalizeTransaction);
+    }
+
+    async function loadHoldings() {
+      const { data, error } = await supabaseClient
+        .from("holdings")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        alert("보유종목 불러오기에 실패했어요.");
+        return;
+      }
+
+      holdings = (data || []).map(normalizeHolding).filter(item => item.quantity > 0);
     }
 
     async function insertTransaction(payload) {
@@ -637,6 +577,23 @@
       return true;
     }
 
+    async function deleteTransaction(id) {
+      if (!confirm("이 거래기록을 삭제할까요?")) return;
+
+      const { error } = await supabaseClient
+        .from("transactions")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        alert(`삭제 실패: ${error.message}`);
+        return;
+      }
+
+      await refreshAll(false);
+    }
+
     async function toggleRollback(id, nextValue) {
       const hasRollbackColumn = transactions.some(t => Object.prototype.hasOwnProperty.call(t, "is_rolled_back"));
 
@@ -659,28 +616,15 @@
       await refreshAll(false);
     }
 
-    async function deleteTransaction(id) {
-      if (!confirm("이 거래기록을 삭제할까요?")) return;
-
-      const { error } = await supabaseClient
-        .from("transactions")
-        .delete()
-        .eq("id", id);
-
-      if (error) {
-        console.error(error);
-        alert(`삭제 실패: ${error.message}`);
+    async function fetchQuotes() {
+      if (!WORKER_QUOTE_URL) {
+        quoteMap = {};
         return;
       }
 
-      await refreshAll(false);
-    }
-
-    async function fetchQuotes() {
       const tickers = [...new Set(
-        transactions
-          .filter(t => !t.is_rolled_back)
-          .map(t => (t.ticker || "").trim())
+        holdings
+          .map(h => (h.ticker || "").trim())
           .filter(Boolean)
       )];
 
@@ -702,7 +646,6 @@
     }
 
     function getFilteredHoldings() {
-      const holdings = deriveHoldingsFromTransactions(transactions);
       const accountFilter = $("holdingAccountFilter").value;
       const keyword = $("holdingSearch").value.trim().toLowerCase();
 
@@ -713,18 +656,31 @@
           item.name.toLowerCase().includes(keyword) ||
           item.ticker.toLowerCase().includes(keyword);
         return matchAccount && matchKeyword;
+      }).map(item => {
+        const currentPrice = toInt(quoteMap[item.ticker]?.price || item.avg_price || 0);
+        const marketValue = item.quantity * currentPrice;
+        const pnl = marketValue - item.total_cost;
+        const returnRate = item.total_cost > 0 ? (pnl / item.total_cost) * 100 : 0;
+
+        return {
+          ...item,
+          current_price: currentPrice,
+          market_value: marketValue,
+          pnl,
+          return_rate: returnRate
+        };
       });
     }
 
-    function renderSummary(holdings) {
-      const totalCost = holdings.reduce((sum, item) => sum + toInt(item.total_cost), 0);
-      const marketValue = holdings.reduce((sum, item) => sum + toInt(item.market_value), 0);
+    function renderSummary(filteredHoldings) {
+      const totalCost = filteredHoldings.reduce((sum, item) => sum + toInt(item.total_cost), 0);
+      const marketValue = filteredHoldings.reduce((sum, item) => sum + toInt(item.market_value), 0);
       const pnl = marketValue - totalCost;
       const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
 
       $("summaryTotalCost").textContent = formatKRW(totalCost);
       $("summaryMarketValue").textContent = formatKRW(marketValue);
-      $("summaryPnL").textContent = (pnl >= 0 ? "+" : "") + formatKRW(pnl);
+      $("summaryPnL").textContent = `${pnl >= 0 ? "+" : ""}${formatKRW(pnl)}`;
       $("summaryReturnRate").textContent = formatPercent(rate);
 
       $("summaryPnL").className = "summary-value";
@@ -740,20 +696,20 @@
     }
 
     function renderHoldings() {
-      const holdings = getFilteredHoldings();
-      renderSummary(holdings);
+      const list = getFilteredHoldings();
+      renderSummary(list);
 
       const tbody = $("holdingsTableBody");
       tbody.innerHTML = "";
 
-      if (!holdings.length) {
+      if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="10" class="dim">보유종목이 없습니다.</td></tr>`;
         renderAllocationChart([]);
         return;
       }
 
-      for (const item of holdings) {
-        const pnlStyle = item.pnl > 0 ? "color: #16a34a;" : item.pnl < 0 ? "color: #dc2626;" : "";
+      for (const item of list) {
+        const pnlStyle = item.pnl > 0 ? "color:#16a34a;" : item.pnl < 0 ? "color:#dc2626;" : "";
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${escapeHtml(item.account_type)}</td>
@@ -770,7 +726,7 @@
         tbody.appendChild(tr);
       }
 
-      renderAllocationChart(holdings);
+      renderAllocationChart(list);
     }
 
     function getFilteredTransactions() {
@@ -840,7 +796,7 @@
       }
     }
 
-    function renderAllocationChart(holdings) {
+    function renderAllocationChart(list) {
       const ctx = $("allocationChart").getContext("2d");
 
       if (allocationChart) allocationChart.destroy();
@@ -848,9 +804,9 @@
       allocationChart = new Chart(ctx, {
         type: "doughnut",
         data: {
-          labels: holdings.map(h => h.name),
+          labels: list.map(item => item.name),
           datasets: [{
-            data: holdings.map(h => h.market_value)
+            data: list.map(item => item.market_value)
           }]
         },
         options: {
@@ -860,7 +816,7 @@
             legend: { position: "bottom" },
             tooltip: {
               callbacks: {
-                label: function(context) {
+                label(context) {
                   return `${context.label}: ${formatKRW(context.parsed)}`;
                 }
               }
@@ -888,20 +844,6 @@
       if (!payload.name) return alert("종목명을 입력해줘.");
       if (payload.quantity <= 0) return alert("수량을 확인해줘.");
 
-      if (payload.action === "SELL") {
-        const currentHoldings = deriveHoldingsFromTransactions(transactions);
-        const match = currentHoldings.find(h =>
-          h.account_type === payload.account_type &&
-          h.ticker === payload.ticker &&
-          h.name === payload.name
-        );
-
-        const holdQty = match?.quantity || 0;
-        if (holdQty < payload.quantity) {
-          return alert(`매도 수량이 보유 수량보다 많아요. 현재 보유수량: ${holdQty.toLocaleString("ko-KR")}`);
-        }
-      }
-
       const ok = await insertTransaction(payload);
       if (!ok) return;
 
@@ -923,9 +865,10 @@
 
     async function refreshAll(withQuote = true) {
       await loadTransactions();
+      await loadHoldings();
       if (withQuote) await fetchQuotes();
-      renderHoldings();
       renderTransactions();
+      renderHoldings();
     }
 
     function bindEvents() {
