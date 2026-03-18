@@ -47,7 +47,7 @@
       padding: 14px; border: 1px solid #e7eefc; border-radius: 14px; background: #fcfdff;
     }
     .account-summary-name { font-size: 18px; font-weight: 800; padding-top: 10px; }
-    .account-summary-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .account-summary-values { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .account-summary-values .value {
       font-size: clamp(18px, 2vw, 30px); font-weight: 800; line-height: 1.25;
       word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
@@ -366,6 +366,7 @@
           <div class="account-summary-name">연금저축</div>
           <div class="account-summary-values">
             <div class="item"><div class="title">평가금</div><div class="value" id="pensionValue">0원</div></div>
+            <div class="item"><div class="title">총매입금</div><div class="value" id="pensionBuy">0원</div></div>
             <div class="item"><div class="title">손익</div><div class="value" id="pensionProfit">0원</div></div>
             <div class="item"><div class="title">수익률</div><div class="value" id="pensionRate">0%</div></div>
           </div>
@@ -374,6 +375,7 @@
           <div class="account-summary-name">금현물계좌</div>
           <div class="account-summary-values">
             <div class="item"><div class="title">평가금</div><div class="value" id="goldValue">0원</div></div>
+            <div class="item"><div class="title">총매입금</div><div class="value" id="goldBuy">0원</div></div>
             <div class="item"><div class="title">손익</div><div class="value" id="goldProfit">0원</div></div>
             <div class="item"><div class="title">수익률</div><div class="value" id="goldRate">0%</div></div>
           </div>
@@ -1251,11 +1253,13 @@
       document.getElementById("sumCount").textContent = holdings.length.toLocaleString("ko-KR") + "개";
     }
 
-    function renderOneAccountSummary(items, valueId, profitId, rateId) {
+    function renderOneAccountSummary(items, buyId, valueId, profitId, rateId) {
       const totalBuy = items.reduce((s, h) => s + intWon(h.buy), 0);
       const totalValue = items.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
+
+      document.getElementById(buyId).textContent = won(totalBuy);
       document.getElementById(valueId).textContent = won(totalValue);
       document.getElementById(profitId).textContent = won(totalProfit);
       document.getElementById(profitId).className = "value " + (totalProfit >= 0 ? "profit" : "loss");
@@ -1264,9 +1268,9 @@
     }
 
     function renderAccountSummary() {
-      renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaValue", "isaProfit", "isaRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionValue", "pensionProfit", "pensionRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldValue", "goldProfit", "goldRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaValue", "isaBuy", "isaProfit", "isaRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionValue", "pensionBuy", "pensionProfit", "pensionRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldValue", "goldBuy", "goldProfit", "goldRate");
     }
 
     function renderDividendSummary() {
