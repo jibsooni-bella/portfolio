@@ -342,8 +342,8 @@
     <div class="card">
       <h2>전체 요약</h2>
       <div class="summary">
-        <div class="item"><div class="title">총 매입금</div><div class="value" id="sumBuy">0원</div></div>
         <div class="item"><div class="title">총 평가금</div><div class="value" id="sumValue">0원</div></div>
+        <div class="item"><div class="title">총 매입금</div><div class="value" id="sumBuy">0원</div></div>
         <div class="item"><div class="title">총 손익</div><div class="value" id="sumProfit">0원</div></div>
         <div class="item"><div class="title">총 수익률</div><div class="value" id="sumRate">0%</div></div>
         <div class="item"><div class="title">보유 종목 수</div><div class="value" id="sumCount">0개</div></div>
@@ -358,8 +358,8 @@
           <div class="account-summary-values">
             <div class="item"><div class="title">평가금</div><div class="value" id="isaValue">0원</div></div>
             <div class="item"><div class="title">총매입금</div><div class="value" id="isaBuy">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="isaProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="isaRate">0%</div></div>
+            <div class="item"><div class="title">총손익</div><div class="value" id="isaProfit">0원</div></div>
+            <div class="item"><div class="title">손익률</div><div class="value" id="isaRate">0%</div></div>
           </div>
         </div>
         <div class="account-summary-row">
@@ -367,8 +367,8 @@
           <div class="account-summary-values">
             <div class="item"><div class="title">평가금</div><div class="value" id="pensionValue">0원</div></div>
             <div class="item"><div class="title">총매입금</div><div class="value" id="pensionBuy">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="pensionProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="pensionRate">0%</div></div>
+            <div class="item"><div class="title">총손익</div><div class="value" id="pensionProfit">0원</div></div>
+            <div class="item"><div class="title">손익률</div><div class="value" id="pensionRate">0%</div></div>
           </div>
         </div>
         <div class="account-summary-row">
@@ -376,8 +376,8 @@
           <div class="account-summary-values">
             <div class="item"><div class="title">평가금</div><div class="value" id="goldValue">0원</div></div>
             <div class="item"><div class="title">총매입금</div><div class="value" id="goldBuy">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="goldProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="goldRate">0%</div></div>
+            <div class="item"><div class="title">총손익</div><div class="value" id="goldProfit">0원</div></div>
+            <div class="item"><div class="title">손익률</div><div class="value" id="goldRate">0%</div></div>
           </div>
         </div>
       </div>
@@ -1244,8 +1244,8 @@
       const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
-      document.getElementById("sumBuy").textContent = won(totalBuy);
       document.getElementById("sumValue").textContent = won(totalValue);
+      document.getElementById("sumBuy").textContent = won(totalBuy);
       document.getElementById("sumProfit").textContent = won(totalProfit);
       document.getElementById("sumProfit").className = "value " + (totalProfit >= 0 ? "profit" : "loss");
       document.getElementById("sumRate").textContent = pct(totalRate);
@@ -1268,9 +1268,9 @@
     }
 
     function renderAccountSummary() {
-      renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaValue", "isaBuy", "isaProfit", "isaRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionValue", "pensionBuy", "pensionProfit", "pensionRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldValue", "goldBuy", "goldProfit", "goldRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaBuy", "isaValue", "isaProfit", "isaRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionBuy", "pensionValue", "pensionProfit", "pensionRate");
+      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldBuy", "goldValue", "goldProfit", "goldRate");
     }
 
     function renderDividendSummary() {
@@ -1922,7 +1922,7 @@
     ensureAccountTargets();
     clearSymbolChartSummary();
     reloadAllData().catch(err => {
-      alert("초기 불러오기 실패: " + err.message + "\n\nmonthly_investments / account_targets 테이블 생성 여부도 확인해줘.");
+      alert("초기 불러오기 실패: " + err.message + "\\n\\nmonthly_investments / account_targets 테이블 생성 여부도 확인해줘.");
       console.error(err);
     });
   </script>
