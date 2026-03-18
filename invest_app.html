@@ -10,20 +10,21 @@
 
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #f3f4f6;
       --card: #ffffff;
       --line: #e5e7eb;
-      --text: #111827;
+      --text: #0f172a;
       --sub: #6b7280;
       --blue: #2563eb;
       --green: #16a34a;
       --red: #dc2626;
       --orange: #ea580c;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
       --radius: 16px;
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
@@ -32,19 +33,18 @@
     }
 
     .wrap {
-      max-width: 1400px;
+      max-width: 1150px;
       margin: 0 auto;
       padding: 20px;
     }
 
-    h1, h2, h3 {
-      margin: 0 0 12px;
-    }
+    h1, h2 { margin: 0; }
 
     .page-title {
-      margin-bottom: 18px;
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 800;
+      margin-bottom: 16px;
+      color: #0b2a5b;
     }
 
     .grid-summary {
@@ -64,33 +64,33 @@
 
     .summary-label {
       color: var(--sub);
-      font-size: 13px;
+      font-size: 12px;
       margin-bottom: 8px;
     }
 
     .summary-value {
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 800;
-      line-height: 1.2;
     }
 
-    .summary-value.positive { color: var(--green); }
-    .summary-value.negative { color: var(--red); }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
 
     .section {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .section-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: 170px 160px 170px 170px 1fr;
       gap: 12px;
+      align-items: end;
     }
 
     .field {
@@ -100,35 +100,37 @@
     }
 
     .field label {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--sub);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .field input,
-    .field select,
-    .field textarea {
+    .field select {
       width: 100%;
-      padding: 11px 12px;
-      border-radius: 10px;
+      padding: 10px 12px;
       border: 1px solid var(--line);
+      border-radius: 10px;
       background: #fff;
       font-size: 14px;
       outline: none;
     }
 
-    .field textarea {
-      resize: vertical;
-      min-height: 44px;
+    .field.span-2 {
+      grid-column: span 2;
     }
 
-    .field.span-2 { grid-column: span 2; }
-    .field.span-3 { grid-column: span 3; }
-    .field.span-6 { grid-column: span 6; }
+    .row2 {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 170px 170px 170px 1fr;
+      gap: 12px;
+      align-items: end;
+    }
 
     .actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-top: 14px;
       flex-wrap: wrap;
     }
@@ -136,17 +138,23 @@
     button {
       border: 0;
       border-radius: 10px;
-      padding: 10px 14px;
+      padding: 9px 14px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
     }
 
-    .btn-primary { background: var(--blue); color: white; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
     .btn-gray { background: #e5e7eb; color: #111827; }
-    .btn-red { background: var(--red); color: white; }
-    .btn-orange { background: var(--orange); color: white; }
-    .btn-green { background: var(--green); color: white; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-orange { background: var(--orange); color: #fff; }
+
+    .footer-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--sub);
+    }
 
     .toolbar {
       display: flex;
@@ -154,18 +162,18 @@
       gap: 12px;
       margin-bottom: 12px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
-    .toolbar .left,
-    .toolbar .right {
+    .toolbar-right {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       align-items: center;
     }
 
-    .toolbar input,
-    .toolbar select {
+    .toolbar select,
+    .toolbar input {
       padding: 10px 12px;
       border-radius: 10px;
       border: 1px solid var(--line);
@@ -174,35 +182,33 @@
 
     .table-wrap {
       overflow-x: auto;
-      border-radius: 16px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1100px;
-      background: #fff;
+      min-width: 980px;
     }
 
     th, td {
-      padding: 12px 10px;
+      padding: 10px 8px;
       border-bottom: 1px solid var(--line);
+      font-size: 13px;
       text-align: left;
       white-space: nowrap;
-      font-size: 14px;
     }
 
     th {
-      background: #f9fafb;
       color: var(--sub);
       font-weight: 700;
-      position: sticky;
-      top: 0;
-      z-index: 1;
     }
 
     td.num, th.num {
       text-align: right;
+    }
+
+    .dim {
+      color: var(--sub);
     }
 
     .badge {
@@ -229,110 +235,34 @@
       color: var(--orange);
     }
 
-    .dim {
-      color: var(--sub);
-    }
-
     .muted-row {
       opacity: 0.55;
       background: #fafafa;
     }
 
-    .pc-only { display: block; }
     .mobile-only { display: none; }
-
-    .holding-cards,
-    .txn-cards {
-      display: grid;
-      gap: 12px;
-    }
-
-    .holding-card,
-    .txn-card {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      background: #fff;
-    }
-
-    .holding-top,
-    .txn-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
-      margin-bottom: 10px;
-    }
-
-    .holding-name,
-    .txn-name {
-      font-weight: 800;
-      font-size: 15px;
-    }
-
-    .holding-ticker,
-    .txn-sub {
-      color: var(--sub);
-      font-size: 12px;
-      margin-top: 2px;
-    }
-
-    .kv {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px 12px;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-
-    .kv .k {
-      color: var(--sub);
-    }
-
-    .kv .v {
-      text-align: right;
-      font-weight: 700;
-    }
 
     canvas {
       width: 100% !important;
-      max-height: 380px;
+      height: 280px !important;
     }
 
-    .footer-note {
-      margin-top: 8px;
-      font-size: 12px;
-      color: var(--sub);
-    }
-
-    @media (max-width: 1024px) {
+    @media (max-width: 900px) {
       .grid-summary {
         grid-template-columns: repeat(2, 1fr);
       }
-      .form-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .field.span-2,
-      .field.span-3,
-      .field.span-6 {
-        grid-column: span 2;
+
+      .form-grid,
+      .row2 {
+        grid-template-columns: 1fr 1fr;
       }
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 700px) {
       .wrap { padding: 14px; }
       .grid-summary { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
-      .field.span-2,
-      .field.span-3,
-      .field.span-6 { grid-column: span 1; }
-
-      .pc-only { display: none; }
-      .mobile-only { display: block; }
-
-      .summary-value {
-        font-size: 22px;
-      }
+      .form-grid,
+      .row2 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -363,6 +293,7 @@
 
     <section class="section card">
       <h2 class="section-title">거래기록 추가</h2>
+
       <div class="form-grid">
         <div class="field">
           <label>거래일</label>
@@ -391,19 +322,21 @@
           <input type="text" id="ticker" placeholder="예: 069500.KS" />
         </div>
 
-        <div class="field span-2">
+        <div class="field">
           <label>종목명</label>
           <input type="text" id="name" placeholder="예: KODEX 200" />
         </div>
+      </div>
 
+      <div class="row2">
         <div class="field">
           <label>수량</label>
-          <input type="number" id="quantity" min="1" step="1" placeholder="0" />
+          <input type="number" id="quantity" min="1" step="1" value="0" />
         </div>
 
         <div class="field">
           <label>단가(원)</label>
-          <input type="number" id="unitPrice" min="0" step="1" placeholder="0" />
+          <input type="number" id="unitPrice" min="0" step="1" value="0" />
         </div>
 
         <div class="field">
@@ -411,7 +344,7 @@
           <input type="number" id="fee" min="0" step="1" value="0" />
         </div>
 
-        <div class="field span-3">
+        <div class="field">
           <label>메모</label>
           <input type="text" id="memo" placeholder="선택 입력" />
         </div>
@@ -423,17 +356,13 @@
         <button class="btn-green" id="refreshBtn" type="button">현재가 새로고침</button>
       </div>
 
-      <div class="footer-note">
-        총매입금/평가금액/손익은 모두 원 단위 정수로 처리됩니다.
-      </div>
+      <div class="footer-note">총매입금/평가금액/손익은 모두 원 단위 정수로 처리됩니다.</div>
     </section>
 
     <section class="section card">
       <div class="toolbar">
-        <div class="left">
-          <h2 class="section-title" style="margin:0;">보유종목</h2>
-        </div>
-        <div class="right">
+        <h2 class="section-title" style="margin-bottom:0;">보유종목</h2>
+        <div class="toolbar-right">
           <select id="holdingAccountFilter">
             <option value="ALL">전체 계좌</option>
             <option value="ISA">ISA</option>
@@ -444,7 +373,7 @@
         </div>
       </div>
 
-      <div class="pc-only table-wrap">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -463,8 +392,6 @@
           <tbody id="holdingsTableBody"></tbody>
         </table>
       </div>
-
-      <div class="mobile-only holding-cards" id="holdingsCards"></div>
     </section>
 
     <section class="section card">
@@ -474,10 +401,8 @@
 
     <section class="section card">
       <div class="toolbar">
-        <div class="left">
-          <h2 class="section-title" style="margin:0;">거래기록</h2>
-        </div>
-        <div class="right">
+        <h2 class="section-title" style="margin-bottom:0;">거래기록</h2>
+        <div class="toolbar-right">
           <select id="txnAccountFilter">
             <option value="ALL">전체 계좌</option>
             <option value="ISA">ISA</option>
@@ -493,7 +418,7 @@
         </div>
       </div>
 
-      <div class="pc-only table-wrap">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -514,32 +439,20 @@
           <tbody id="transactionsTableBody"></tbody>
         </table>
       </div>
-
-      <div class="mobile-only txn-cards" id="txnCards"></div>
     </section>
   </div>
 
   <script>
-    /****************************************************************
-     * 환경설정
-     ****************************************************************/
     const SUPABASE_URL = "YOUR_SUPABASE_URL";
     const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-    const WORKER_QUOTE_URL = "YOUR_CLOUDFLARE_WORKER_URL"; 
-    // 예: https://your-worker.workers.dev/quote?symbols=069500.KS,360750.KS
+    const WORKER_QUOTE_URL = "YOUR_CLOUDFLARE_WORKER_URL";
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    /****************************************************************
-     * 전역 상태
-     ****************************************************************/
     let transactions = [];
     let quoteMap = {};
     let allocationChart = null;
 
-    /****************************************************************
-     * 유틸
-     ****************************************************************/
     const $ = (id) => document.getElementById(id);
 
     function todayYmd() {
@@ -558,12 +471,11 @@
     }
 
     function formatKRW(value) {
-      const n = toInt(value, 0);
-      return `₩${n.toLocaleString("ko-KR")}`;
+      return `₩${toInt(value).toLocaleString("ko-KR")}`;
     }
 
     function formatNumber(value) {
-      return toInt(value, 0).toLocaleString("ko-KR");
+      return toInt(value).toLocaleString("ko-KR");
     }
 
     function formatPercent(value) {
@@ -580,17 +492,23 @@
         .replaceAll("'", "&#39;");
     }
 
+    function normalizeTransaction(txn) {
+      const normalizedAction = txn.trade_type === "매도" ? "SELL" : "BUY";
+      return {
+        ...txn,
+        account_type: txn.account || "일반",
+        action: normalizedAction,
+        quantity: toInt(txn.qty),
+        unit_price: toInt(txn.price),
+        fee: toInt(txn.fee),
+        is_rolled_back: txn.is_rolled_back || false
+      };
+    }
+
     function txnAmount(txn) {
       return toInt(txn.quantity) * toInt(txn.unit_price) + toInt(txn.fee);
     }
 
-    /****************************************************************
-     * 핵심 계산 로직
-     * - 거래기록 기반으로 보유종목 재계산
-     * - 총매입금은 항상 원 단위 정수
-     * - 부분매도는 비율 안분 후 Math.round()
-     * - 전량매도는 총매입금 0 보장
-     ****************************************************************/
     function deriveHoldingsFromTransactions(sourceTransactions) {
       const activeTxns = [...sourceTransactions]
         .filter(t => !t.is_rolled_back)
@@ -615,10 +533,7 @@
             ticker,
             name,
             quantity: 0,
-            total_cost: 0,
-            buy_amount: 0,
-            sell_amount: 0,
-            realized_pnl: 0
+            total_cost: 0
           });
         }
 
@@ -632,45 +547,34 @@
         if (txn.action === "BUY") {
           item.quantity += qty;
           item.total_cost += totalAmount;
-          item.buy_amount += totalAmount;
         }
 
         if (txn.action === "SELL") {
-          if (qty <= 0) continue;
-          if (item.quantity <= 0 || item.total_cost < 0) continue;
+          if (qty <= 0 || item.quantity <= 0) continue;
 
           const sellQty = Math.min(qty, item.quantity);
           const beforeQty = item.quantity;
           const beforeCost = item.total_cost;
 
           let costToRemove = 0;
-
           if (sellQty >= beforeQty) {
             costToRemove = beforeCost;
           } else {
-            // 비율 안분 -> 정수 반올림
             costToRemove = Math.round((beforeCost * sellQty) / beforeQty);
           }
 
-          const sellProceeds = grossAmount - fee; // 매도수수료 차감
-          const realized = sellProceeds - costToRemove;
-
           item.quantity = beforeQty - sellQty;
           item.total_cost = beforeCost - costToRemove;
-          item.sell_amount += sellProceeds;
-          item.realized_pnl += realized;
 
           if (item.quantity <= 0) {
             item.quantity = 0;
             item.total_cost = 0;
           }
-          if (item.total_cost < 0) {
-            item.total_cost = 0;
-          }
+          if (item.total_cost < 0) item.total_cost = 0;
         }
       }
 
-      const holdings = [...map.values()]
+      return [...map.values()]
         .filter(item => item.quantity > 0)
         .map(item => {
           const currentPrice = toInt(quoteMap[item.ticker]?.price || 0);
@@ -687,14 +591,10 @@
             return_rate: returnRate,
             avg_price: avgPrice
           };
-        });
-
-      return holdings.sort((a, b) => b.market_value - a.market_value);
+        })
+        .sort((a, b) => b.market_value - a.market_value);
     }
 
-    /****************************************************************
-     * Supabase
-     ****************************************************************/
     async function loadTransactions() {
       const { data, error } = await supabaseClient
         .from("transactions")
@@ -708,13 +608,26 @@
         return;
       }
 
-      transactions = data || [];
+      transactions = (data || []).map(normalizeTransaction);
     }
 
     async function insertTransaction(payload) {
+      const dbPayload = {
+        trade_date: payload.trade_date,
+        account: payload.account_type,
+        name: payload.name,
+        ticker: payload.ticker,
+        trade_type: payload.action === "BUY" ? "매수" : "매도",
+        qty: toInt(payload.quantity),
+        price: toInt(payload.unit_price),
+        total_amount: toInt(payload.quantity) * toInt(payload.unit_price) + toInt(payload.fee),
+        fee: toInt(payload.fee),
+        memo: payload.memo || ""
+      };
+
       const { error } = await supabaseClient
         .from("transactions")
-        .insert([payload]);
+        .insert([dbPayload]);
 
       if (error) {
         console.error(error);
@@ -725,11 +638,12 @@
     }
 
     async function toggleRollback(id, nextValue) {
-      const confirmMessage = nextValue
-        ? "이 거래를 롤백 처리할까요?"
-        : "이 거래의 롤백을 해제할까요?";
+      const hasRollbackColumn = transactions.some(t => Object.prototype.hasOwnProperty.call(t, "is_rolled_back"));
 
-      if (!confirm(confirmMessage)) return;
+      if (!hasRollbackColumn) {
+        alert("현재 DB에 is_rolled_back 컬럼이 없어서 롤백 기능을 사용할 수 없어요.");
+        return;
+      }
 
       const { error } = await supabaseClient
         .from("transactions")
@@ -746,7 +660,7 @@
     }
 
     async function deleteTransaction(id) {
-      if (!confirm("이 거래기록을 삭제할까요? 삭제 후 복구가 어려울 수 있어요.")) return;
+      if (!confirm("이 거래기록을 삭제할까요?")) return;
 
       const { error } = await supabaseClient
         .from("transactions")
@@ -762,9 +676,6 @@
       await refreshAll(false);
     }
 
-    /****************************************************************
-     * 현재가 조회
-     ****************************************************************/
     async function fetchQuotes() {
       const tickers = [...new Set(
         transactions
@@ -782,24 +693,14 @@
         const url = `${WORKER_QUOTE_URL}?symbols=${encodeURIComponent(tickers.join(","))}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error("quote fetch failed");
-
         const data = await res.json();
-
-        // 기대 형식 예시:
-        // {
-        //   "069500.KS": { "price": 41230, "name": "KODEX 200" },
-        //   "360750.KS": { "price": 12345, "name": "TIGER 미국S&P500" }
-        // }
         quoteMap = data || {};
       } catch (err) {
         console.error(err);
-        alert("현재가 조회에 실패했어요. Worker URL을 확인해줘.");
+        quoteMap = {};
       }
     }
 
-    /****************************************************************
-     * 렌더링
-     ****************************************************************/
     function getFilteredHoldings() {
       const holdings = deriveHoldingsFromTransactions(transactions);
       const accountFilter = $("holdingAccountFilter").value;
@@ -826,8 +727,8 @@
       $("summaryPnL").textContent = (pnl >= 0 ? "+" : "") + formatKRW(pnl);
       $("summaryReturnRate").textContent = formatPercent(rate);
 
-      $("summaryPnL").classList.remove("positive", "negative");
-      $("summaryReturnRate").classList.remove("positive", "negative");
+      $("summaryPnL").className = "summary-value";
+      $("summaryReturnRate").className = "summary-value";
 
       if (pnl > 0) {
         $("summaryPnL").classList.add("positive");
@@ -843,22 +744,18 @@
       renderSummary(holdings);
 
       const tbody = $("holdingsTableBody");
-      const cards = $("holdingsCards");
-
       tbody.innerHTML = "";
-      cards.innerHTML = "";
 
       if (!holdings.length) {
         tbody.innerHTML = `<tr><td colspan="10" class="dim">보유종목이 없습니다.</td></tr>`;
-        cards.innerHTML = `<div class="holding-card dim">보유종목이 없습니다.</div>`;
         renderAllocationChart([]);
         return;
       }
 
       for (const item of holdings) {
-        const pnlClass = item.pnl > 0 ? "color: var(--green);" : item.pnl < 0 ? "color: var(--red);" : "";
-        const row = document.createElement("tr");
-        row.innerHTML = `
+        const pnlStyle = item.pnl > 0 ? "color: #16a34a;" : item.pnl < 0 ? "color: #dc2626;" : "";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
           <td>${escapeHtml(item.account_type)}</td>
           <td>${escapeHtml(item.name)}</td>
           <td>${escapeHtml(item.ticker)}</td>
@@ -867,31 +764,10 @@
           <td class="num">${formatKRW(item.total_cost)}</td>
           <td class="num">${formatKRW(item.current_price)}</td>
           <td class="num">${formatKRW(item.market_value)}</td>
-          <td class="num" style="${pnlClass}">${item.pnl >= 0 ? "+" : ""}${formatKRW(item.pnl)}</td>
-          <td class="num" style="${pnlClass}">${formatPercent(item.return_rate)}</td>
+          <td class="num" style="${pnlStyle}">${item.pnl >= 0 ? "+" : ""}${formatKRW(item.pnl)}</td>
+          <td class="num" style="${pnlStyle}">${formatPercent(item.return_rate)}</td>
         `;
-        tbody.appendChild(row);
-
-        const card = document.createElement("div");
-        card.className = "holding-card";
-        card.innerHTML = `
-          <div class="holding-top">
-            <div>
-              <div class="holding-name">${escapeHtml(item.name)}</div>
-              <div class="holding-ticker">${escapeHtml(item.ticker)} · ${escapeHtml(item.account_type)}</div>
-            </div>
-          </div>
-          <div class="kv">
-            <div class="k">보유수량</div><div class="v">${formatNumber(item.quantity)}</div>
-            <div class="k">평균단가</div><div class="v">${formatKRW(item.avg_price)}</div>
-            <div class="k">총매입금</div><div class="v">${formatKRW(item.total_cost)}</div>
-            <div class="k">현재가</div><div class="v">${formatKRW(item.current_price)}</div>
-            <div class="k">평가금액</div><div class="v">${formatKRW(item.market_value)}</div>
-            <div class="k">평가손익</div><div class="v" style="${pnlClass}">${item.pnl >= 0 ? "+" : ""}${formatKRW(item.pnl)}</div>
-            <div class="k">수익률</div><div class="v" style="${pnlClass}">${formatPercent(item.return_rate)}</div>
-          </div>
-        `;
-        cards.appendChild(card);
+        tbody.appendChild(tr);
       }
 
       renderAllocationChart(holdings);
@@ -921,31 +797,30 @@
     function renderTransactions() {
       const list = getFilteredTransactions();
       const tbody = $("transactionsTableBody");
-      const cards = $("txnCards");
-
       tbody.innerHTML = "";
-      cards.innerHTML = "";
 
       if (!list.length) {
         tbody.innerHTML = `<tr><td colspan="12" class="dim">거래기록이 없습니다.</td></tr>`;
-        cards.innerHTML = `<div class="txn-card dim">거래기록이 없습니다.</div>`;
         return;
       }
 
       for (const txn of list) {
-        const row = document.createElement("tr");
-        if (txn.is_rolled_back) row.classList.add("muted-row");
-
         const amount = txnAmount(txn);
-        const badgeClass = txn.action === "BUY" ? "buy" : "sell";
+        const actionBadge = txn.action === "BUY"
+          ? `<span class="badge buy">매수</span>`
+          : `<span class="badge sell">매도</span>`;
+
         const statusHtml = txn.is_rolled_back
           ? `<span class="badge rollback">롤백</span>`
           : `<span class="dim">정상</span>`;
 
-        row.innerHTML = `
-          <td>${escapeHtml(txn.trade_date)}</td>
-          <td>${escapeHtml(txn.account_type)}</td>
-          <td><span class="badge ${badgeClass}">${txn.action === "BUY" ? "매수" : "매도"}</span></td>
+        const tr = document.createElement("tr");
+        if (txn.is_rolled_back) tr.classList.add("muted-row");
+
+        tr.innerHTML = `
+          <td>${escapeHtml(txn.trade_date || "")}</td>
+          <td>${escapeHtml(txn.account_type || "")}</td>
+          <td>${actionBadge}</td>
           <td>${escapeHtml(txn.name || "")}</td>
           <td>${escapeHtml(txn.ticker || "")}</td>
           <td class="num">${formatNumber(txn.quantity)}</td>
@@ -956,76 +831,37 @@
           <td>${escapeHtml(txn.memo || "")}</td>
           <td>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
-              <button class="btn-orange" onclick="toggleRollback('${txn.id}', ${!txn.is_rolled_back})">
-                ${txn.is_rolled_back ? "롤백해제" : "롤백"}
-              </button>
-              <button class="btn-red" onclick="deleteTransaction('${txn.id}')">삭제</button>
+              <button class="btn-orange" onclick="toggleRollback(${txn.id}, ${!txn.is_rolled_back})">롤백</button>
+              <button class="btn-red" onclick="deleteTransaction(${txn.id})">삭제</button>
             </div>
           </td>
         `;
-        tbody.appendChild(row);
-
-        const card = document.createElement("div");
-        card.className = `txn-card ${txn.is_rolled_back ? "muted-row" : ""}`;
-        card.innerHTML = `
-          <div class="txn-top">
-            <div>
-              <div class="txn-name">${escapeHtml(txn.name || "-")}</div>
-              <div class="txn-sub">${escapeHtml(txn.ticker || "")} · ${escapeHtml(txn.account_type)} · ${escapeHtml(txn.trade_date)}</div>
-            </div>
-            <div>
-              <span class="badge ${badgeClass}">${txn.action === "BUY" ? "매수" : "매도"}</span>
-            </div>
-          </div>
-          <div class="kv">
-            <div class="k">수량</div><div class="v">${formatNumber(txn.quantity)}</div>
-            <div class="k">단가</div><div class="v">${formatKRW(txn.unit_price)}</div>
-            <div class="k">수수료</div><div class="v">${formatKRW(txn.fee)}</div>
-            <div class="k">거래금액</div><div class="v">${formatKRW(amount)}</div>
-            <div class="k">상태</div><div class="v">${txn.is_rolled_back ? "롤백" : "정상"}</div>
-            <div class="k">메모</div><div class="v">${escapeHtml(txn.memo || "-")}</div>
-          </div>
-          <div class="actions" style="margin-top:12px;">
-            <button class="btn-orange" onclick="toggleRollback('${txn.id}', ${!txn.is_rolled_back})">
-              ${txn.is_rolled_back ? "롤백해제" : "롤백"}
-            </button>
-            <button class="btn-red" onclick="deleteTransaction('${txn.id}')">삭제</button>
-          </div>
-        `;
-        cards.appendChild(card);
+        tbody.appendChild(tr);
       }
     }
 
     function renderAllocationChart(holdings) {
       const ctx = $("allocationChart").getContext("2d");
-      const labels = holdings.map(x => x.name);
-      const values = holdings.map(x => x.market_value);
 
-      if (allocationChart) {
-        allocationChart.destroy();
-      }
+      if (allocationChart) allocationChart.destroy();
 
       allocationChart = new Chart(ctx, {
         type: "doughnut",
         data: {
-          labels,
+          labels: holdings.map(h => h.name),
           datasets: [{
-            data: values
+            data: holdings.map(h => h.market_value)
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              position: "bottom"
-            },
+            legend: { position: "bottom" },
             tooltip: {
               callbacks: {
-                label: (context) => {
-                  const label = context.label || "";
-                  const value = context.parsed || 0;
-                  return `${label}: ${formatKRW(value)}`;
+                label: function(context) {
+                  return `${context.label}: ${formatKRW(context.parsed)}`;
                 }
               }
             }
@@ -1034,72 +870,37 @@
       });
     }
 
-    /****************************************************************
-     * 저장
-     ****************************************************************/
     async function handleSave() {
-      const trade_date = $("tradeDate").value;
-      const account_type = $("accountType").value;
-      const action = $("actionType").value;
-      const ticker = $("ticker").value.trim();
-      const name = $("name").value.trim();
-      const quantity = toInt($("quantity").value);
-      const unit_price = toInt($("unitPrice").value);
-      const fee = toInt($("fee").value);
-      const memo = $("memo").value.trim();
+      const payload = {
+        trade_date: $("tradeDate").value,
+        account_type: $("accountType").value,
+        action: $("actionType").value,
+        ticker: $("ticker").value.trim(),
+        name: $("name").value.trim(),
+        quantity: toInt($("quantity").value),
+        unit_price: toInt($("unitPrice").value),
+        fee: toInt($("fee").value),
+        memo: $("memo").value.trim()
+      };
 
-      if (!trade_date) {
-        alert("거래일을 입력해줘.");
-        return;
-      }
-      if (!ticker) {
-        alert("티커를 입력해줘.");
-        return;
-      }
-      if (!name) {
-        alert("종목명을 입력해줘.");
-        return;
-      }
-      if (quantity <= 0) {
-        alert("수량은 1 이상이어야 해.");
-        return;
-      }
-      if (unit_price < 0) {
-        alert("단가를 확인해줘.");
-        return;
-      }
-      if (fee < 0) {
-        alert("수수료를 확인해줘.");
-        return;
-      }
+      if (!payload.trade_date) return alert("거래일을 입력해줘.");
+      if (!payload.ticker) return alert("티커를 입력해줘.");
+      if (!payload.name) return alert("종목명을 입력해줘.");
+      if (payload.quantity <= 0) return alert("수량을 확인해줘.");
 
-      if (action === "SELL") {
+      if (payload.action === "SELL") {
         const currentHoldings = deriveHoldingsFromTransactions(transactions);
         const match = currentHoldings.find(h =>
-          h.account_type === account_type &&
-          h.ticker === ticker &&
-          h.name === name
+          h.account_type === payload.account_type &&
+          h.ticker === payload.ticker &&
+          h.name === payload.name
         );
 
         const holdQty = match?.quantity || 0;
-        if (holdQty < quantity) {
-          alert(`매도 수량이 보유 수량보다 많아요. 현재 보유수량: ${holdQty.toLocaleString("ko-KR")}`);
-          return;
+        if (holdQty < payload.quantity) {
+          return alert(`매도 수량이 보유 수량보다 많아요. 현재 보유수량: ${holdQty.toLocaleString("ko-KR")}`);
         }
       }
-
-      const payload = {
-        trade_date,
-        account_type,
-        action,
-        ticker,
-        name,
-        quantity,
-        unit_price,
-        fee,
-        memo,
-        is_rolled_back: false
-      };
 
       const ok = await insertTransaction(payload);
       if (!ok) return;
@@ -1114,27 +915,19 @@
       $("actionType").value = "BUY";
       $("ticker").value = "";
       $("name").value = "";
-      $("quantity").value = "";
-      $("unitPrice").value = "";
+      $("quantity").value = "0";
+      $("unitPrice").value = "0";
       $("fee").value = "0";
       $("memo").value = "";
     }
 
-    /****************************************************************
-     * 전체 새로고침
-     ****************************************************************/
     async function refreshAll(withQuote = true) {
       await loadTransactions();
-      if (withQuote) {
-        await fetchQuotes();
-      }
+      if (withQuote) await fetchQuotes();
       renderHoldings();
       renderTransactions();
     }
 
-    /****************************************************************
-     * 이벤트
-     ****************************************************************/
     function bindEvents() {
       $("saveBtn").addEventListener("click", handleSave);
       $("resetBtn").addEventListener("click", () => resetForm(false));
@@ -1145,23 +938,19 @@
 
       $("holdingAccountFilter").addEventListener("change", renderHoldings);
       $("holdingSearch").addEventListener("input", renderHoldings);
-
       $("txnAccountFilter").addEventListener("change", renderTransactions);
       $("txnStatusFilter").addEventListener("change", renderTransactions);
       $("txnSearch").addEventListener("input", renderTransactions);
     }
 
-    /****************************************************************
-     * 초기화
-     ****************************************************************/
+    window.toggleRollback = toggleRollback;
+    window.deleteTransaction = deleteTransaction;
+
     async function init() {
       $("tradeDate").value = todayYmd();
       bindEvents();
       await refreshAll(true);
     }
-
-    window.toggleRollback = toggleRollback;
-    window.deleteTransaction = deleteTransaction;
 
     init();
   </script>
