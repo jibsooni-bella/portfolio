@@ -3,1599 +3,1030 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ETF 투자 관리</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>ETF 투자관리</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --line: #e5e7eb;
+      --text: #111827;
+      --sub: #6b7280;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --red: #dc2626;
+      --orange: #ea580c;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --radius: 16px;
+    }
+
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fb; color: #222; }
-    .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 14px 40px; }
-    h1 { margin: 0 0 18px; font-size: 32px; font-weight: 800; }
-    h2 { margin: 0 0 14px; font-size: 24px; }
-    .card { background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); margin-bottom: 16px; }
-
-    .grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-    .grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-
-    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #555; }
-    input, select, button { width: 100%; padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; font-size: 14px; background: #fff; }
-    button { cursor: pointer; font-weight: 700; border: none; background: #2f6fed; color: #fff; }
-    button.secondary { background: #eef3ff; color: #2f6fed; border: 1px solid #cfdcff; }
-    button.danger { background: #fce8e8; color: #b42318; border: 1px solid #f4c7c7; }
-
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .btn-row button { width: auto; min-width: 120px; }
-
-    .summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-    .summary .item, .grid-4 .item, .account-summary-values .item, .chart-summary .item {
-      background: #f8faff; border: 1px solid #e3ebff; border-radius: 14px; padding: 14px; min-width: 0;
-    }
-    .summary .title, .account-summary-values .title, .grid-4 .title, .chart-summary .title {
-      font-size: 13px; color: #667085; margin-bottom: 8px; font-weight: 700;
-    }
-    .summary .value, .grid-4 .value, .chart-summary .value {
-      font-size: clamp(18px, 2vw, 24px); font-weight: 800; line-height: 1.25;
-      white-space: normal; word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
-    .account-summary-list { display: flex; flex-direction: column; gap: 14px; }
-    .account-summary-row {
-      display: grid; grid-template-columns: 140px 1fr; gap: 14px; align-items: start;
-      padding: 14px; border: 1px solid #e7eefc; border-radius: 14px; background: #fcfdff;
-    }
-    .account-summary-name { font-size: 18px; font-weight: 800; padding-top: 10px; }
-    .account-summary-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .account-summary-values .value {
-      font-size: clamp(18px, 2vw, 30px); font-weight: 800; line-height: 1.25;
-      word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
-    .table-wrap { overflow-x: auto; }
+    h1, h2, h3 {
+      margin: 0 0 12px;
+    }
 
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid #eceff5; padding: 10px 8px; text-align: center; vertical-align: middle; }
-    th { background: #f8fafc; font-size: 14px; white-space: nowrap; }
-    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .page-title {
+      margin-bottom: 18px;
+      font-size: 28px;
+      font-weight: 800;
+    }
 
-    .transactions-table { min-width: 1100px; table-layout: fixed; }
-    .holdings-table { table-layout: fixed; }
-    .holdings-table.standard { min-width: 1900px; }
-    .holdings-table.gold-only { min-width: 1280px; }
+    .grid-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
 
-    .holdings-table input,
-    .holdings-table select {
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .summary-label {
+      color: var(--sub);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .summary-value.positive { color: var(--green); }
+    .summary-value.negative { color: var(--red); }
+
+    .section {
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--sub);
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
       width: 100%;
-      min-width: 0;
-      max-width: 100%;
-      padding: 8px 10px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 14px;
+      outline: none;
     }
 
-    .holdings-table td.num input,
-    .holdings-table td.num select {
-      text-align: right;
+    .field textarea {
+      resize: vertical;
+      min-height: 44px;
     }
 
-    .account-cell { width: 92px; }
-    .asset-cell { width: 86px; }
-    .name-cell { width: 240px; }
-    .ticker-cell { width: 92px; }
-    .qty-cell { width: 82px; }
-    .buy-cell { width: 130px; }
-    .avg-cell { width: 110px; }
-    .price-cell { width: 130px; }
-    .value-cell { width: 120px; }
-    .profit-cell { width: 120px; }
-    .rate-cell { width: 90px; }
-    .weight-cell { width: 90px; }
-    .cycle-cell { width: 110px; }
-    .dividend-per-payment-cell { width: 120px; }
-    .dividend-input-cell { width: 130px; }
-    .dividend-value-cell { width: 130px; }
-    .action-cell { width: 92px; }
+    .field.span-2 { grid-column: span 2; }
+    .field.span-3 { grid-column: span 3; }
+    .field.span-6 { grid-column: span 6; }
 
-    .dividend-value-cell { line-height: 1.35; }
-    .profit { color: #067647; font-weight: 700; }
-    .loss { color: #b42318; font-weight: 700; }
-    .notice { font-size: 13px; color: #667085; line-height: 1.5; margin-top: 8px; }
-    .rebalance-box { line-height: 1.8; font-size: 15px; min-height: 120px; }
-    .last-update { font-size: 13px; color: #667085; margin-top: 10px; }
-    .help-box { margin-top: 10px; padding: 12px; border-radius: 12px; background: #fff8e8; border: 1px solid #f3dfab; font-size: 13px; line-height: 1.6; }
-
-    .account-section { margin-bottom: 18px; }
-    .account-section:last-child { margin-bottom: 0; }
-    .account-section-title {
-      font-size: 18px; font-weight: 800; margin: 0 0 10px; padding: 8px 12px;
-      border-radius: 12px; background: #f8fafc; border: 1px solid #e7eefc;
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
     }
 
-    .empty-text { color: #667085; font-size: 14px; padding: 8px 4px 0; }
-    .muted { font-size: 12px; color: #667085; }
-    .chart-box { width: 100%; max-width: 220px; height: 220px; margin: 0 auto; position: relative; }
-    .section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-    .section-head h2 { margin: 0; }
-    .section-meta { font-size: 13px; color: #667085; }
-    .holdings-toggle-row { justify-content: center; }
-    .holdings-toggle-btn { min-width: 220px; }
-    .sortable { cursor: pointer; user-select: none; }
-    .sortable:hover { background: #eef3ff; }
-    .sort-indicator { margin-left: 4px; color: #2f6fed; font-size: 12px; }
-    .account-panel-title { font-size: 20px; font-weight: 800; margin: 0 0 12px; }
-
-    .holdings-desktop { display: block; }
-    .holdings-mobile { display: none; }
-
-    .holding-mobile-list { display: flex; flex-direction: column; gap: 12px; }
-    .holding-mobile-card {
-      border: 1px solid #e7eefc;
-      border-radius: 14px;
-      background: #fcfdff;
-      overflow: hidden;
-    }
-    .holding-mobile-card summary {
-      list-style: none;
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
-      padding: 14px;
     }
-    .holding-mobile-card summary::-webkit-details-marker { display: none; }
 
-    .holding-mobile-top {
+    .btn-primary { background: var(--blue); color: white; }
+    .btn-gray { background: #e5e7eb; color: #111827; }
+    .btn-red { background: var(--red); color: white; }
+    .btn-orange { background: var(--orange); color: white; }
+    .btn-green { background: var(--green); color: white; }
+
+    .toolbar {
       display: flex;
       justify-content: space-between;
       gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar .left,
+    .toolbar .right {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f9fafb;
+      color: var(--sub);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td.num, th.num {
+      text-align: right;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge.buy {
+      background: rgba(22, 163, 74, 0.12);
+      color: var(--green);
+    }
+
+    .badge.sell {
+      background: rgba(220, 38, 38, 0.12);
+      color: var(--red);
+    }
+
+    .badge.rollback {
+      background: rgba(234, 88, 12, 0.12);
+      color: var(--orange);
+    }
+
+    .dim {
+      color: var(--sub);
+    }
+
+    .muted-row {
+      opacity: 0.55;
+      background: #fafafa;
+    }
+
+    .pc-only { display: block; }
+    .mobile-only { display: none; }
+
+    .holding-cards,
+    .txn-cards {
+      display: grid;
+      gap: 12px;
+    }
+
+    .holding-card,
+    .txn-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .holding-top,
+    .txn-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
       align-items: flex-start;
       margin-bottom: 10px;
     }
-    .holding-mobile-name {
-      font-size: 16px;
+
+    .holding-name,
+    .txn-name {
       font-weight: 800;
-      line-height: 1.35;
-      word-break: keep-all;
+      font-size: 15px;
     }
-    .holding-mobile-ticker {
+
+    .holding-ticker,
+    .txn-sub {
+      color: var(--sub);
       font-size: 12px;
-      color: #667085;
-      margin-top: 3px;
+      margin-top: 2px;
     }
-    .holding-mobile-rate {
-      font-size: 16px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-    .holding-mobile-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 10px;
-    }
-    .holding-mobile-chip {
-      font-size: 12px;
-      font-weight: 700;
-      color: #475467;
-      background: #f2f4f7;
-      border: 1px solid #e4e7ec;
-      border-radius: 999px;
-      padding: 4px 8px;
-    }
-    .holding-mobile-grid {
+
+    .kv {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .holding-mobile-stat {
-      background: #f8faff;
-      border: 1px solid #e3ebff;
-      border-radius: 12px;
-      padding: 10px;
-      min-width: 0;
-    }
-    .holding-mobile-stat .label {
-      font-size: 12px;
-      color: #667085;
-      margin-bottom: 5px;
-      font-weight: 700;
-    }
-    .holding-mobile-stat .value {
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
       font-size: 14px;
-      font-weight: 800;
-      line-height: 1.35;
-      word-break: keep-all;
-      overflow-wrap: anywhere;
-      font-variant-numeric: tabular-nums;
-    }
-    .holding-mobile-detail {
-      border-top: 1px solid #eceff5;
-      padding: 14px;
-      background: #fff;
-    }
-    .holding-mobile-edit-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .holding-mobile-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .holding-mobile-actions button {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .inline-note {
-      font-size: 12px;
-      color: #667085;
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
-    .symbol-chart-wrap {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 14px;
-      align-items: start;
-    }
-    .symbol-chart-panel {
-      border: 1px solid #e7eefc;
-      border-radius: 14px;
-      background: #fcfdff;
-      padding: 14px;
-    }
-    .symbol-chart-view {
-      border: 1px solid #e7eefc;
-      border-radius: 14px;
-      background: #fff;
-      padding: 12px;
-      min-height: 420px;
-    }
-    .symbol-chart-status {
-      font-size: 13px;
-      color: #667085;
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-    .chart-canvas-wrap {
-      position: relative;
-      width: 100%;
-      height: 320px;
-      margin-bottom: 12px;
-    }
-    .chart-summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .range-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
       margin-top: 10px;
     }
-    .range-row button {
-      width: auto;
-      min-width: 68px;
-      padding: 8px 10px;
-    }
-    .range-row button.active {
-      background: #2f6fed;
-      color: #fff;
-      border: none;
+
+    .kv .k {
+      color: var(--sub);
     }
 
-    @media (max-width: 1100px) {
-      .grid-3 { grid-template-columns: 1fr; }
-      .symbol-chart-wrap { grid-template-columns: 1fr; }
+    .kv .v {
+      text-align: right;
+      font-weight: 700;
     }
 
-    @media (max-width: 900px) {
-      .grid, .grid-5, .grid-4, .summary, .grid-2, .chart-summary { grid-template-columns: 1fr; }
-      h1 { font-size: 28px; }
-      .btn-row button { width: 100%; }
-      .account-summary-row { grid-template-columns: 1fr; }
-      .account-summary-name { padding-top: 0; }
-      .account-summary-values { grid-template-columns: 1fr; }
+    canvas {
+      width: 100% !important;
+      max-height: 380px;
+    }
 
-      .holdings-desktop { display: none; }
-      .holdings-mobile { display: block; }
+    .footer-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--sub);
+    }
 
-      .holding-mobile-edit-grid { grid-template-columns: 1fr; }
-      .holding-mobile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .holding-mobile-actions { flex-direction: column; }
+    @media (max-width: 1024px) {
+      .grid-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .field.span-2,
+      .field.span-3,
+      .field.span-6 {
+        grid-column: span 2;
+      }
+    }
 
-      .symbol-chart-panel, .symbol-chart-view { padding: 12px; }
-      .chart-canvas-wrap { height: 280px; }
+    @media (max-width: 768px) {
+      .wrap { padding: 14px; }
+      .grid-summary { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.span-2,
+      .field.span-3,
+      .field.span-6 { grid-column: span 1; }
+
+      .pc-only { display: none; }
+      .mobile-only { display: block; }
+
+      .summary-value {
+        font-size: 22px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>📊 ETF 투자 관리</h1>
+    <h1 class="page-title">ETF 투자관리</h1>
 
-    <div class="card">
-      <h2>거래기록 추가</h2>
-      <div class="grid">
-        <div><label for="txDate">거래일</label><input id="txDate" type="date" /></div>
-        <div><label for="txAccount">계좌</label><select id="txAccount"><option value="ISA">ISA</option><option value="연금저축">연금저축</option><option value="금현물계좌">금현물계좌</option></select></div>
-        <div><label for="txTradeType">구분</label><select id="txTradeType"><option value="매수">매수</option><option value="매도">매도</option></select></div>
-        <div><label for="txName">종목명</label><input id="txName" list="txNameList" placeholder="신규 종목도 입력 가능 / 기존 종목 자동완성" /><datalist id="txNameList"></datalist></div>
-        <div><label for="txTicker">티커</label><input id="txTicker" placeholder="신규 종목은 입력 / 기존 종목은 비워도 됨" /></div>
-        <div><label for="txQty">수량</label><input id="txQty" type="number" step="any" placeholder="예: 2" /></div>
-      </div>
-      <div class="grid-3" style="margin-top:10px;">
-        <div><label for="txUnitPrice">1주 단가</label><input id="txUnitPrice" type="number" step="any" placeholder="예: 82000" /></div>
-        <div style="grid-column: span 2;"><label for="txMemo">메모</label><input id="txMemo" placeholder="예: 추가매수 / 일부매도 / 적립식 매수" /></div>
-      </div>
-      <div class="btn-row">
-        <button onclick="addTransaction()">거래기록 저장</button>
-        <button class="secondary" onclick="updateAllPrices()">ETF 가격 자동 업데이트</button>
-        <button class="secondary" onclick="reloadAllData()">서버에서 다시 불러오기</button>
-      </div>
-      <div class="notice">이제 앱은 <strong>거래기록 중심</strong>으로 동작해. 신규 종목 매수도 거래기록에서 만들고, 기존 종목 추가매수/매도도 여기서 처리해.</div>
-      <div class="help-box">신규 종목 매수: 계좌 + 구분(매수) + 종목명 + 티커 + 수량 + 단가 입력<br>기존 종목 추가매수/매도: 종목명 선택 후 티커는 비워도 돼.</div>
-      <div class="help-box">매도는 보유수량 초과 입력 시 저장되지 않아. 월별 투자기록은 <strong>매수만</strong> 자동 반영돼.</div>
-      <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
-    </div>
-
-    <div class="card">
-      <h2>전체 요약</h2>
-      <div class="summary">
-        <div class="item"><div class="title">총 매입금</div><div class="value" id="sumBuy">0원</div></div>
-        <div class="item"><div class="title">총 평가금</div><div class="value" id="sumValue">0원</div></div>
-        <div class="item"><div class="title">총 손익</div><div class="value" id="sumProfit">0원</div></div>
-        <div class="item"><div class="title">총 수익률</div><div class="value" id="sumRate">0%</div></div>
-        <div class="item"><div class="title">보유 종목 수</div><div class="value" id="sumCount">0개</div></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>계좌별 요약</h2>
-      <div class="account-summary-list">
-        <div class="account-summary-row">
-          <div class="account-summary-name">ISA</div>
-          <div class="account-summary-values">
-            <div class="item"><div class="title">평가금</div><div class="value" id="isaValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="isaProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="isaRate">0%</div></div>
-          </div>
+    <section class="section">
+      <div class="grid-summary">
+        <div class="card">
+          <div class="summary-label">총 매입금</div>
+          <div class="summary-value" id="summaryTotalCost">₩0</div>
         </div>
-        <div class="account-summary-row">
-          <div class="account-summary-name">연금저축</div>
-          <div class="account-summary-values">
-            <div class="item"><div class="title">평가금</div><div class="value" id="pensionValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="pensionProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="pensionRate">0%</div></div>
-          </div>
+        <div class="card">
+          <div class="summary-label">총 평가금액</div>
+          <div class="summary-value" id="summaryMarketValue">₩0</div>
         </div>
-        <div class="account-summary-row">
-          <div class="account-summary-name">금현물계좌</div>
-          <div class="account-summary-values">
-            <div class="item"><div class="title">평가금</div><div class="value" id="goldValue">0원</div></div>
-            <div class="item"><div class="title">손익</div><div class="value" id="goldProfit">0원</div></div>
-            <div class="item"><div class="title">수익률</div><div class="value" id="goldRate">0%</div></div>
-          </div>
+        <div class="card">
+          <div class="summary-label">평가손익</div>
+          <div class="summary-value" id="summaryPnL">₩0</div>
+        </div>
+        <div class="card">
+          <div class="summary-label">수익률</div>
+          <div class="summary-value" id="summaryReturnRate">0.00%</div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card"><h2>보유 종목</h2><div id="holdingsSections"></div></div>
-
-    <div class="card">
-      <div class="section-head">
-        <h2>종목 차트 조회</h2>
-        <div class="section-meta" id="chartCurrentSymbolText">현재 선택: -</div>
-      </div>
-      <div class="symbol-chart-wrap">
-        <div class="symbol-chart-panel">
-          <div>
-            <label for="chartHoldingSelect">보유종목 빠른선택</label>
-            <select id="chartHoldingSelect">
-              <option value="">보유종목 선택</option>
-            </select>
-          </div>
-
-          <div style="margin-top:10px;">
-            <label for="chartTickerInput">티커 직접입력</label>
-            <input id="chartTickerInput" placeholder="예: VOO / SCHD / 069500 / 360750 / 133690.KS" />
-          </div>
-
-          <div class="range-row">
-            <button type="button" class="secondary active" onclick="setChartRange('1W', this)">1주</button>
-            <button type="button" class="secondary" onclick="setChartRange('1M', this)">1개월</button>
-            <button type="button" class="secondary" onclick="setChartRange('3M', this)">3개월</button>
-            <button type="button" class="secondary" onclick="setChartRange('6M', this)">6개월</button>
-            <button type="button" class="secondary" onclick="setChartRange('12M', this)">1년</button>
-            <button type="button" class="secondary" onclick="setChartRange('24M', this)">2년</button>
-            <button type="button" class="secondary" onclick="setChartRange('36M', this)">3년</button>
-            <button type="button" class="secondary" onclick="setChartRange('60M', this)">5년</button>
-            <button type="button" class="secondary" onclick="setChartRange('MAX', this)">전체</button>
-          </div>
-
-          <div class="btn-row">
-            <button onclick="loadSymbolChart()">차트 불러오기</button>
-          </div>
-
-          <div class="symbol-chart-status" id="chartStatusText">
-            보유종목 선택 또는 티커 입력 후 차트를 불러와줘.
-          </div>
-          <div class="inline-note">
-            차트는 Worker의 히스토리 응답을 사용해 직접 그려. 한국 티커는 .KS/.KQ 포함 입력도 가능해.
-          </div>
+    <section class="section card">
+      <h2 class="section-title">거래기록 추가</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label>거래일</label>
+          <input type="date" id="tradeDate" />
         </div>
 
-        <div class="symbol-chart-view">
-          <div class="chart-canvas-wrap">
-            <canvas id="symbolHistoryChart"></canvas>
-          </div>
-          <div class="chart-summary">
-            <div class="item"><div class="title">시작가</div><div class="value" id="chartStartPrice">-</div></div>
-            <div class="item"><div class="title">현재가</div><div class="value" id="chartEndPrice">-</div></div>
-            <div class="item"><div class="title">기간수익률</div><div class="value" id="chartReturnRate">-</div></div>
-            <div class="item"><div class="title">최고 / 최저</div><div class="value" id="chartHighLow">-</div></div>
-          </div>
+        <div class="field">
+          <label>계좌</label>
+          <select id="accountType">
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+            <option value="일반">일반</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>구분</label>
+          <select id="actionType">
+            <option value="BUY">매수</option>
+            <option value="SELL">매도</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>티커</label>
+          <input type="text" id="ticker" placeholder="예: 069500.KS" />
+        </div>
+
+        <div class="field span-2">
+          <label>종목명</label>
+          <input type="text" id="name" placeholder="예: KODEX 200" />
+        </div>
+
+        <div class="field">
+          <label>수량</label>
+          <input type="number" id="quantity" min="1" step="1" placeholder="0" />
+        </div>
+
+        <div class="field">
+          <label>단가(원)</label>
+          <input type="number" id="unitPrice" min="0" step="1" placeholder="0" />
+        </div>
+
+        <div class="field">
+          <label>수수료(원)</label>
+          <input type="number" id="fee" min="0" step="1" value="0" />
+        </div>
+
+        <div class="field span-3">
+          <label>메모</label>
+          <input type="text" id="memo" placeholder="선택 입력" />
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="section-head">
-        <h2>거래기록</h2>
-        <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
+      <div class="actions">
+        <button class="btn-primary" id="saveBtn">저장</button>
+        <button class="btn-gray" id="resetBtn" type="button">입력 초기화</button>
+        <button class="btn-green" id="refreshBtn" type="button">현재가 새로고침</button>
       </div>
-      <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
-        <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
+
+      <div class="footer-note">
+        총매입금/평가금액/손익은 모두 원 단위 정수로 처리됩니다.
       </div>
-      <div class="table-wrap">
-        <table class="transactions-table">
+    </section>
+
+    <section class="section card">
+      <div class="toolbar">
+        <div class="left">
+          <h2 class="section-title" style="margin:0;">보유종목</h2>
+        </div>
+        <div class="right">
+          <select id="holdingAccountFilter">
+            <option value="ALL">전체 계좌</option>
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+            <option value="일반">일반</option>
+          </select>
+          <input type="text" id="holdingSearch" placeholder="종목명/티커 검색" />
+        </div>
+      </div>
+
+      <div class="pc-only table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>계좌</th>
+              <th>종목명</th>
+              <th>티커</th>
+              <th class="num">보유수량</th>
+              <th class="num">평균단가</th>
+              <th class="num">총매입금</th>
+              <th class="num">현재가</th>
+              <th class="num">평가금액</th>
+              <th class="num">평가손익</th>
+              <th class="num">수익률</th>
+            </tr>
+          </thead>
+          <tbody id="holdingsTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="mobile-only holding-cards" id="holdingsCards"></div>
+    </section>
+
+    <section class="section card">
+      <h2 class="section-title">자산 차트</h2>
+      <canvas id="allocationChart"></canvas>
+    </section>
+
+    <section class="section card">
+      <div class="toolbar">
+        <div class="left">
+          <h2 class="section-title" style="margin:0;">거래기록</h2>
+        </div>
+        <div class="right">
+          <select id="txnAccountFilter">
+            <option value="ALL">전체 계좌</option>
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+            <option value="일반">일반</option>
+          </select>
+          <select id="txnStatusFilter">
+            <option value="ALL">전체 상태</option>
+            <option value="ACTIVE">정상</option>
+            <option value="ROLLED_BACK">롤백</option>
+          </select>
+          <input type="text" id="txnSearch" placeholder="종목명/티커 검색" />
+        </div>
+      </div>
+
+      <div class="pc-only table-wrap">
+        <table>
           <thead>
             <tr>
               <th>거래일</th>
               <th>계좌</th>
+              <th>구분</th>
               <th>종목명</th>
               <th>티커</th>
-              <th>구분</th>
               <th class="num">수량</th>
-              <th class="num">1주 단가</th>
-              <th class="num">총금액</th>
+              <th class="num">단가</th>
+              <th class="num">수수료</th>
+              <th class="num">거래금액</th>
+              <th>상태</th>
               <th>메모</th>
-              <th>삭제</th>
+              <th>관리</th>
             </tr>
           </thead>
-          <tbody id="transactionsBody"></tbody>
+          <tbody id="transactionsTableBody"></tbody>
         </table>
       </div>
-    </div>
 
-    <div class="grid-2">
-      <div class="card"><div class="account-panel-title">ISA 자산 비중</div><div class="chart-box"><canvas id="isaAssetChart"></canvas></div></div>
-      <div class="card">
-        <div class="account-panel-title" id="isaRebalanceTitle">ISA 리밸런싱 : 총금액 0원</div>
-        <div class="grid-5">
-          <div><label for="isaTargetStock">주식 목표%</label><input id="isaTargetStock" type="number" step="any" /></div>
-          <div><label for="isaTargetBond">채권 목표%</label><input id="isaTargetBond" type="number" step="any" /></div>
-          <div><label for="isaTargetGold">금 목표%</label><input id="isaTargetGold" type="number" step="any" /></div>
-          <div><label for="isaTargetDollar">달러 목표%</label><input id="isaTargetDollar" type="number" step="any" /></div>
-          <div><label for="isaTargetREIT">리츠 목표%</label><input id="isaTargetREIT" type="number" step="any" /></div>
-        </div>
-        <div class="btn-row"><button onclick="saveTargetsAndRender('ISA')">ISA 목표 저장 / 계산</button></div>
-        <div id="isaRebalanceResult" class="rebalance-box"></div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card"><div class="account-panel-title">연금저축 자산 비중</div><div class="chart-box"><canvas id="pensionAssetChart"></canvas></div></div>
-      <div class="card">
-        <div class="account-panel-title" id="pensionRebalanceTitle">연금저축 리밸런싱 : 총금액 0원</div>
-        <div class="grid-5">
-          <div><label for="pensionTargetStock">주식 목표%</label><input id="pensionTargetStock" type="number" step="any" /></div>
-          <div><label for="pensionTargetBond">채권 목표%</label><input id="pensionTargetBond" type="number" step="any" /></div>
-          <div><label for="pensionTargetGold">금 목표%</label><input id="pensionTargetGold" type="number" step="any" /></div>
-          <div><label for="pensionTargetDollar">달러 목표%</label><input id="pensionTargetDollar" type="number" step="any" /></div>
-          <div><label for="pensionTargetREIT">리츠 목표%</label><input id="pensionTargetREIT" type="number" step="any" /></div>
-        </div>
-        <div class="btn-row"><button onclick="saveTargetsAndRender('연금저축')">연금저축 목표 저장 / 계산</button></div>
-        <div id="pensionRebalanceResult" class="rebalance-box"></div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h2>월별 투자 기록</h2>
-        <div class="grid-3">
-          <div><label for="investMonth">월</label><input id="investMonth" type="month" /></div>
-          <div><label for="investAmount">투자금</label><input id="investAmount" type="number" step="any" placeholder="예: 500000" /></div>
-          <div><label>&nbsp;</label><button onclick="addMonthlyInvestment()">기록 추가</button></div>
-        </div>
-        <div class="notice">거래기록 <strong>매수</strong> 추가/삭제 시에도 해당 월 투자금이 자동 반영돼. 매도는 월 투자금에 더하지 않아.</div>
-        <div class="table-wrap" style="margin-top:12px;">
-          <table style="min-width:100%;">
-            <thead><tr><th>월</th><th class="num">투자금</th><th>삭제</th></tr></thead>
-            <tbody id="monthlyBody"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card"><h2>월별 투자금 그래프</h2><canvas id="monthlyChart"></canvas></div>
-    </div>
-
-    <div class="card">
-      <h2>배당 요약</h2>
-      <div class="grid-4">
-        <div class="item"><div class="title">올해 예상 배당금</div><div class="value" id="dividendYear">0원</div></div>
-        <div class="item"><div class="title">월 환산 예상금</div><div class="value" id="dividendMonth">0원</div></div>
-        <div class="item"><div class="title">배당 입력 종목 수</div><div class="value" id="dividendCount">0개</div></div>
-        <div class="item"><div class="title">배당 평가금 기준</div><div class="value" id="dividendBase">0원</div></div>
-      </div>
-    </div>
+      <div class="mobile-only txn-cards" id="txnCards"></div>
+    </section>
   </div>
 
   <script>
-    const WORKER_URL = "https://etf-price-worker.bellayeon.workers.dev/";
-    const supabaseUrl = "https://elitonibcpypezuhzwch.supabase.co";
-    const supabaseKey = "sb_publishable_ciS23u-IPzbLgaXQf27TMw___Sofvw3";
-    const { createClient } = supabase;
-    const db = createClient(supabaseUrl, supabaseKey);
+    /****************************************************************
+     * 환경설정
+     ****************************************************************/
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    const WORKER_QUOTE_URL = "YOUR_CLOUDFLARE_WORKER_URL"; 
+    // 예: https://your-worker.workers.dev/quote?symbols=069500.KS,360750.KS
 
-    let holdings = [];
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    /****************************************************************
+     * 전역 상태
+     ****************************************************************/
     let transactions = [];
-    let monthlyInvestments = [];
-    let accountTargets = {
-      "ISA": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 },
-      "연금저축": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 }
-    };
+    let quoteMap = {};
+    let allocationChart = null;
 
-    let showAllTransactions = false;
-    let isaAssetChart = null;
-    let pensionAssetChart = null;
-    let monthlyChart = null;
-    let symbolHistoryChart = null;
+    /****************************************************************
+     * 유틸
+     ****************************************************************/
+    const $ = (id) => document.getElementById(id);
 
-    let expandedAccounts = { "ISA": false, "연금저축": false, "금현물계좌": false };
-    let holdingsSortState = {
-      "ISA": { key: "value", order: "desc" },
-      "연금저축": { key: "value", order: "desc" },
-      "금현물계좌": { key: "value", order: "desc" }
-    };
-
-    let selectedChartRange = "1W";
-
-    const HOLDINGS_PREVIEW_COUNT = 5;
-    const EPSILON = 0.000001;
-
-    function won(n) { return Number(n || 0).toLocaleString("ko-KR") + "원"; }
-    function num(val) { const n = Number(val); return isNaN(n) ? 0 : n; }
-    function pct(n) { return `${num(n).toFixed(2)}%`; }
-    function esc(value) {
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
-    function setLastUpdateText() {
-      document.getElementById("lastUpdateText").textContent = "마지막 업데이트: " + new Date().toLocaleString("ko-KR");
-    }
-
-    function setDefaultTransactionDate() {
+    function todayYmd() {
       const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const el = document.getElementById("txDate");
-      if (el && !el.value) el.value = today;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
     }
 
-    function normalizeText(value = "") { return String(value).replace(/\s+/g, "").toLowerCase(); }
-    function hasAny(text, keywords) { return keywords.some(keyword => text.includes(keyword)); }
-    function monthKeyFromDate(dateStr = "") { return String(dateStr).slice(0, 7); }
-
-    function ensureAccountTargets() {
-      if (!accountTargets["ISA"]) accountTargets["ISA"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
-      if (!accountTargets["연금저축"]) accountTargets["연금저축"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
+    function toInt(value, fallback = 0) {
+      if (value === null || value === undefined || value === "") return fallback;
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.round(n);
     }
 
-    function classifyAsset(name = "", ticker = "", account = "") {
-      const text = normalizeText(`${name} ${ticker}`);
-      if (account === "금현물계좌") return "금";
-
-      const goldKeywords = ["금현물", "krx금현물", "gold", "골드", "금선물", "krxgold"];
-      const goldFalsePositives = ["금리", "예금", "적금", "입금", "출금", "송금", "자금"];
-      if (!hasAny(text, goldFalsePositives) && hasAny(text, goldKeywords)) return "금";
-      if (hasAny(text, ["리츠", "reit", "부동산"])) return "리츠";
-      if (hasAny(text, ["채권", "국채", "회사채", "종합채권", "중장기국채", "단기채", "mmf", "sofr", "bond", "trf"])) return "채권";
-      if (hasAny(text, ["달러", "usd", "미국달러"])) return "달러";
-      return "주식";
+    function formatKRW(value) {
+      const n = toInt(value, 0);
+      return `₩${n.toLocaleString("ko-KR")}`;
     }
 
-    function isManualGold(item) {
-      return item.account === "금현물계좌" || (item.ticker || "").toUpperCase() === "KRX-GOLD";
+    function formatNumber(value) {
+      return toInt(value, 0).toLocaleString("ko-KR");
     }
 
-    function getCycleCount(cycle) {
-      const map = { "월배당": 12, "분기배당": 4, "반기배당": 2, "연배당": 1, "직접입력": 0 };
-      return map[cycle] ?? 0;
+    function formatPercent(value) {
+      const n = Number(value || 0);
+      return `${n.toFixed(2)}%`;
     }
 
-    function calcExpectedDividendPerShare(item) {
-      const direct = num(item.expectedDividendPerShare);
-      const cycle = item.dividendCycle || "직접입력";
-      const perPayment = num(item.dividendPerPayment);
-      return cycle === "직접입력" ? direct : perPayment * getCycleCount(cycle);
+    function escapeHtml(str = "") {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
     }
 
-    async function fetchPriceFromWorker(ticker) {
-      if (!ticker) return 0;
-      const res = await fetch(`${WORKER_URL}?ticker=${encodeURIComponent(ticker)}`);
-      const data = await res.json();
-      return typeof data.price === "number" ? data.price : 0;
+    function txnAmount(txn) {
+      return toInt(txn.quantity) * toInt(txn.unit_price) + toInt(txn.fee);
     }
 
-    async function loadMonthlyInvestmentsFromSupabase() {
-      const { data, error } = await db.from("monthly_investments").select("*").order("month", { ascending: true });
-      if (error) throw error;
-      monthlyInvestments = (data || []).map(item => ({ ...item, amount: Number(item.amount ?? 0) }));
-    }
+    /****************************************************************
+     * 핵심 계산 로직
+     * - 거래기록 기반으로 보유종목 재계산
+     * - 총매입금은 항상 원 단위 정수
+     * - 부분매도는 비율 안분 후 Math.round()
+     * - 전량매도는 총매입금 0 보장
+     ****************************************************************/
+    function deriveHoldingsFromTransactions(sourceTransactions) {
+      const activeTxns = [...sourceTransactions]
+        .filter(t => !t.is_rolled_back)
+        .sort((a, b) => {
+          const ad = new Date(`${a.trade_date}T00:00:00`).getTime();
+          const bd = new Date(`${b.trade_date}T00:00:00`).getTime();
+          if (ad !== bd) return ad - bd;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
 
-    async function loadAccountTargetsFromSupabase() {
-      const { data, error } = await db.from("account_targets").select("*").order("account", { ascending: true });
-      if (error) throw error;
-      accountTargets = {
-        "ISA": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 },
-        "연금저축": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 }
-      };
-      (data || []).forEach(row => {
-        accountTargets[row.account] = {
-          stock: Number(row.stock ?? 60),
-          bond: Number(row.bond ?? 20),
-          gold: Number(row.gold ?? 10),
-          dollar: Number(row.dollar ?? 5),
-          reit: Number(row.reit ?? 5)
-        };
-      });
-      ensureAccountTargets();
-    }
+      const map = new Map();
 
-    async function seedDefaultAccountTargetsIfEmpty() {
-      const { count, error } = await db.from("account_targets").select("id", { count: "exact", head: true });
-      if (error) throw error;
-      if ((count || 0) > 0) return;
-      const rows = [
-        { account: "ISA", stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 },
-        { account: "연금저축", stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 }
-      ];
-      const { error: insertError } = await db.from("account_targets").insert(rows);
-      if (insertError) throw insertError;
-    }
+      for (const txn of activeTxns) {
+        const account = txn.account_type || "일반";
+        const ticker = (txn.ticker || "").trim();
+        const name = (txn.name || "").trim();
+        const key = `${account}__${ticker}__${name}`;
 
-    async function reloadAllData() {
-      const [holdingsRes, transactionsRes] = await Promise.all([
-        db.from("holdings").select("*").order("id", { ascending: true }),
-        db.from("transactions").select("*").order("trade_date", { ascending: false }).order("id", { ascending: false })
-      ]);
-
-      if (holdingsRes.error) throw holdingsRes.error;
-      if (transactionsRes.error) throw transactionsRes.error;
-
-      holdings = (holdingsRes.data || []).map(h => ({
-        ...h,
-        qty: Number(h.qty ?? 0),
-        buy: Number(h.buy ?? 0),
-        price: Number(h.price ?? 0),
-        expectedDividendPerShare: Number(h.expectedDividendPerShare ?? 0),
-        dividendYield: Number(h.dividendYield ?? 0),
-        dividendCycle: h.dividendCycle ?? "직접입력",
-        dividendPerPayment: Number(h.dividendPerPayment ?? 0),
-        assetType: classifyAsset(h.name, h.ticker, h.account)
-      }));
-
-      transactions = (transactionsRes.data || []).map(t => ({
-        ...t,
-        quantity: Number(t.quantity ?? 0),
-        unit_price: Number(t.unit_price ?? 0),
-        total_amount: Number(t.total_amount ?? 0)
-      }));
-
-      await seedDefaultAccountTargetsIfEmpty();
-      await Promise.all([loadMonthlyInvestmentsFromSupabase(), loadAccountTargetsFromSupabase()]);
-      applySavedTargetsToInputs();
-      updateTransactionNameSuggestions();
-      syncChartHoldingOptions();
-      setDefaultTransactionDate();
-      setLastUpdateText();
-      render();
-    }
-
-    function findHoldingByAccountAndName(account, name) {
-      const targetName = normalizeText(name);
-      return holdings.find(h => h.account === account && normalizeText(h.name) === targetName);
-    }
-
-    function findHoldingIndexByTx(tx) {
-      const txName = normalizeText(tx.name);
-      const txTicker = normalizeText(tx.ticker || "");
-      return holdings.findIndex(h =>
-        h.account === tx.account &&
-        normalizeText(h.name) === txName &&
-        normalizeText(h.ticker || "") === txTicker
-      );
-    }
-
-    function toggleAccountSection(accountName) {
-      expandedAccounts[accountName] = !expandedAccounts[accountName];
-      renderHoldingsSections();
-    }
-
-    function setHoldingsSort(accountName, key) {
-      const current = holdingsSortState[accountName];
-      if (current.key === key) current.order = current.order === "desc" ? "asc" : "desc";
-      else {
-        current.key = key;
-        current.order = "desc";
-      }
-      renderHoldingsSections();
-    }
-
-    function getSortIndicator(accountName, key) {
-      const current = holdingsSortState[accountName];
-      if (current.key !== key) return "";
-      return `<span class="sort-indicator">${current.order === "desc" ? "▼" : "▲"}</span>`;
-    }
-
-    function getHoldingMetric(h, key, totalPortfolioValue = 0) {
-      const qty = num(h.qty);
-      const buy = num(h.buy);
-      const price = num(h.price);
-      const value = qty * price;
-      const profit = value - buy;
-      const rate = buy > 0 ? (profit / buy) * 100 : 0;
-      const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
-      const avg = qty > 0 ? buy / qty : 0;
-      return ({ qty, buy, avg, price, value, profit, rate, weight })[key] ?? value;
-    }
-
-    function sortHoldingsItems(items, accountName, totalPortfolioValue) {
-      const sortState = holdingsSortState[accountName] || { key: "value", order: "desc" };
-      const direction = sortState.order === "desc" ? -1 : 1;
-      return [...items].sort((a, b) => {
-        const aValue = getHoldingMetric(a, sortState.key, totalPortfolioValue);
-        const bValue = getHoldingMetric(b, sortState.key, totalPortfolioValue);
-        if (aValue < bValue) return -1 * direction;
-        if (aValue > bValue) return 1 * direction;
-        return normalizeText(a.name).localeCompare(normalizeText(b.name));
-      });
-    }
-
-    function updateTransactionNameSuggestions() {
-      const account = document.getElementById("txAccount").value;
-      const datalist = document.getElementById("txNameList");
-      const names = [...new Set(holdings.filter(h => h.account === account).map(h => h.name))].sort((a, b) => a.localeCompare(b, "ko"));
-      datalist.innerHTML = names.map(name => `<option value="${esc(name)}"></option>`).join("");
-    }
-
-    function autofillTransactionTickerFromName() {
-      const account = document.getElementById("txAccount").value;
-      const name = document.getElementById("txName").value.trim();
-      const tickerInput = document.getElementById("txTicker");
-      if (!name) return;
-      const matched = findHoldingByAccountAndName(account, name);
-      if (matched) tickerInput.value = matched.ticker || "";
-    }
-
-    async function upsertHoldingFromBuyTransaction(tx) {
-      const addedBuy = num(tx.total_amount);
-      let latestPrice = 0;
-      if (!isManualGold({ account: tx.account, ticker: tx.ticker }) && tx.ticker) latestPrice = await fetchPriceFromWorker(tx.ticker);
-      const idx = findHoldingIndexByTx(tx);
-      if (idx >= 0) {
-        const item = holdings[idx];
-        item.qty = num(item.qty) + num(tx.quantity);
-        item.buy = num(item.buy) + addedBuy;
-        item.assetType = classifyAsset(item.name, item.ticker, item.account);
-        if (!isManualGold(item) && latestPrice > 0) item.price = latestPrice;
-        const payload = { account: item.account, assetType: item.assetType, name: item.name, ticker: item.ticker, qty: num(item.qty), buy: num(item.buy), price: num(item.price), expectedDividendPerShare: num(item.expectedDividendPerShare), dividendYield: num(item.dividendYield), dividendCycle: item.dividendCycle || "직접입력", dividendPerPayment: num(item.dividendPerPayment) };
-        const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-        if (error) { alert("보유종목 자동반영 실패: " + error.message); return false; }
-        return true;
-      }
-      const newHolding = { account: tx.account, assetType: classifyAsset(tx.name, tx.ticker, tx.account), name: tx.name, ticker: tx.ticker, qty: num(tx.quantity), buy: addedBuy, price: latestPrice > 0 ? latestPrice : 0, expectedDividendPerShare: 0, dividendYield: 0, dividendCycle: "직접입력", dividendPerPayment: 0 };
-      const { data, error } = await db.from("holdings").insert([newHolding]).select();
-      if (error) { alert("보유종목 자동생성 실패: " + error.message); return false; }
-      if (data?.length) holdings.push({ ...data[0], qty: Number(data[0].qty ?? 0), buy: Number(data[0].buy ?? 0), price: Number(data[0].price ?? 0), expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0), dividendYield: Number(data[0].dividendYield ?? 0), dividendCycle: data[0].dividendCycle ?? "직접입력", dividendPerPayment: Number(data[0].dividendPerPayment ?? 0), assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account) });
-      return true;
-    }
-
-    async function applySellToHolding(tx) {
-      const idx = findHoldingIndexByTx(tx);
-      if (idx < 0) { alert("매도할 보유종목을 찾지 못했어. 계좌/종목명/티커를 확인해줘."); return false; }
-      const item = holdings[idx];
-      const currentQty = num(item.qty);
-      const sellQty = num(tx.quantity);
-      if (currentQty + EPSILON < sellQty) { alert(`매도 수량이 보유수량보다 많아. 현재 보유수량은 ${currentQty}이야.`); return false; }
-      const avgBuy = currentQty > 0 ? num(item.buy) / currentQty : 0;
-      const remainingQty = currentQty - sellQty;
-      const remainingBuy = remainingQty <= EPSILON ? 0 : Math.max(0, num(item.buy) - (avgBuy * sellQty));
-      if (remainingQty <= EPSILON) {
-        const { error } = await db.from("holdings").delete().eq("id", item.id);
-        if (error) { alert("보유종목 매도 반영 실패: " + error.message); return false; }
-        holdings = holdings.filter(h => h.id !== item.id);
-        return true;
-      }
-      item.qty = remainingQty;
-      item.buy = remainingBuy;
-      const payload = { account: item.account, assetType: item.assetType, name: item.name, ticker: item.ticker, qty: num(item.qty), buy: num(item.buy), price: num(item.price), expectedDividendPerShare: num(item.expectedDividendPerShare), dividendYield: num(item.dividendYield), dividendCycle: item.dividendCycle || "직접입력", dividendPerPayment: num(item.dividendPerPayment) };
-      const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-      if (error) { alert("보유종목 매도 반영 실패: " + error.message); return false; }
-      return true;
-    }
-
-    async function rollbackBuyFromHolding(tx) {
-      const idx = findHoldingIndexByTx(tx);
-      if (idx < 0) return true;
-      const item = holdings[idx];
-      const nextQty = num(item.qty) - num(tx.quantity);
-      const nextBuy = num(item.buy) - num(tx.total_amount);
-      if (nextQty <= EPSILON) {
-        const { error } = await db.from("holdings").delete().eq("id", item.id);
-        if (error) { alert("보유종목 자동차감 실패: " + error.message); return false; }
-        holdings = holdings.filter(h => h.id !== item.id);
-        return true;
-      }
-      item.qty = Math.max(0, nextQty);
-      item.buy = Math.max(0, nextBuy);
-      const payload = { account: item.account, assetType: item.assetType, name: item.name, ticker: item.ticker, qty: num(item.qty), buy: num(item.buy), price: num(item.price), expectedDividendPerShare: num(item.expectedDividendPerShare), dividendYield: num(item.dividendYield), dividendCycle: item.dividendCycle || "직접입력", dividendPerPayment: num(item.dividendPerPayment) };
-      const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-      if (error) { alert("보유종목 자동차감 실패: " + error.message); return false; }
-      return true;
-    }
-
-    async function rollbackSellFromHolding(tx) {
-      const idx = findHoldingIndexByTx(tx);
-      let latestPrice = 0;
-      if (!isManualGold({ account: tx.account, ticker: tx.ticker }) && tx.ticker) latestPrice = await fetchPriceFromWorker(tx.ticker);
-      if (idx < 0) {
-        const restoredHolding = { account: tx.account, assetType: classifyAsset(tx.name, tx.ticker, tx.account), name: tx.name, ticker: tx.ticker, qty: num(tx.quantity), buy: num(tx.total_amount), price: latestPrice > 0 ? latestPrice : 0, expectedDividendPerShare: 0, dividendYield: 0, dividendCycle: "직접입력", dividendPerPayment: 0 };
-        const { data, error } = await db.from("holdings").insert([restoredHolding]).select();
-        if (error) { alert("매도 취소 복원 실패: " + error.message); return false; }
-        if (data?.length) holdings.push({ ...data[0], qty: Number(data[0].qty ?? 0), buy: Number(data[0].buy ?? 0), price: Number(data[0].price ?? 0), expectedDividendPerShare: Number(data[0].expectedDividendPerShare ?? 0), dividendYield: Number(data[0].dividendYield ?? 0), dividendCycle: data[0].dividendCycle ?? "직접입력", dividendPerPayment: Number(data[0].dividendPerPayment ?? 0), assetType: classifyAsset(data[0].name, data[0].ticker, data[0].account) });
-        return true;
-      }
-      const item = holdings[idx];
-      item.qty = num(item.qty) + num(tx.quantity);
-      item.buy = num(item.buy) + num(tx.total_amount);
-      if (!isManualGold(item) && latestPrice > 0) item.price = latestPrice;
-      const payload = { account: item.account, assetType: item.assetType, name: item.name, ticker: item.ticker, qty: num(item.qty), buy: num(item.buy), price: num(item.price), expectedDividendPerShare: num(item.expectedDividendPerShare), dividendYield: num(item.dividendYield), dividendCycle: item.dividendCycle || "직접입력", dividendPerPayment: num(item.dividendPerPayment) };
-      const { error } = await db.from("holdings").update(payload).eq("id", item.id);
-      if (error) { alert("매도 취소 복원 실패: " + error.message); return false; }
-      return true;
-    }
-
-    async function addOrUpdateMonthlyInvestment(month, deltaAmount) {
-      if (!month) return;
-      const delta = num(deltaAmount);
-      const existing = monthlyInvestments.find(item => item.month === month);
-      if (existing) {
-        const nextAmount = num(existing.amount) + delta;
-        if (nextAmount <= EPSILON) {
-          const { error } = await db.from("monthly_investments").delete().eq("id", existing.id);
-          if (error) throw error;
-        } else {
-          const { error } = await db.from("monthly_investments").update({ amount: nextAmount }).eq("id", existing.id);
-          if (error) throw error;
-        }
-      } else if (delta > 0) {
-        const { error } = await db.from("monthly_investments").insert([{ month, amount: delta }]);
-        if (error) throw error;
-      }
-      await loadMonthlyInvestmentsFromSupabase();
-    }
-
-    async function syncMonthlyInvestmentFromTransaction(tx, sign = 1) {
-      if ((tx.trade_type || "매수") !== "매수") return;
-      const month = monthKeyFromDate(tx.trade_date);
-      const amount = num(tx.total_amount) * sign;
-      await addOrUpdateMonthlyInvestment(month, amount);
-    }
-
-    async function addTransaction() {
-      const trade_date = document.getElementById("txDate").value;
-      const account = document.getElementById("txAccount").value;
-      const trade_type = document.getElementById("txTradeType").value;
-      const name = document.getElementById("txName").value.trim();
-      let ticker = document.getElementById("txTicker").value.trim();
-      const quantity = num(document.getElementById("txQty").value);
-      const unit_price = num(document.getElementById("txUnitPrice").value);
-      const memo = document.getElementById("txMemo").value.trim();
-
-      if (!trade_date) return alert("거래일을 입력해줘.");
-      if (!name) return alert("종목명을 입력해줘.");
-      if (quantity <= 0) return alert("수량을 0보다 크게 입력해줘.");
-      if (unit_price <= 0) return alert("1주 단가를 0보다 크게 입력해줘.");
-
-      const matchedHolding = findHoldingByAccountAndName(account, name);
-      if (!ticker && matchedHolding) ticker = matchedHolding.ticker || "";
-      if (!ticker && trade_type === "매수") return alert("신규 종목 매수라면 티커를 입력해줘. 기존 보유종목이면 비워도 돼.");
-      if (!ticker && trade_type === "매도") return alert("매도는 기존 보유종목 기준이라 티커를 자동으로 찾지 못하면 직접 입력해야 해.");
-
-      const tx = { trade_date, account, name, ticker, trade_type, quantity, unit_price, total_amount: quantity * unit_price, memo };
-      const { data, error } = await db.from("transactions").insert([tx]).select();
-      if (error) return alert("거래기록 저장 실패: " + error.message);
-
-      if (data?.length) {
-        const inserted = { ...data[0], quantity: Number(data[0].quantity ?? 0), unit_price: Number(data[0].unit_price ?? 0), total_amount: Number(data[0].total_amount ?? 0) };
-        transactions.unshift(inserted);
-
-        let synced = false;
-        if (trade_type === "매수") synced = await upsertHoldingFromBuyTransaction(inserted);
-        if (trade_type === "매도") synced = await applySellToHolding(inserted);
-        if (!synced) {
-          await db.from("transactions").delete().eq("id", inserted.id);
-          transactions = transactions.filter(t => t.id !== inserted.id);
-          return;
+        if (!map.has(key)) {
+          map.set(key, {
+            account_type: account,
+            ticker,
+            name,
+            quantity: 0,
+            total_cost: 0,
+            buy_amount: 0,
+            sell_amount: 0,
+            realized_pnl: 0
+          });
         }
 
-        await syncMonthlyInvestmentFromTransaction(inserted, 1);
-      }
+        const item = map.get(key);
+        const qty = toInt(txn.quantity);
+        const unitPrice = toInt(txn.unit_price);
+        const fee = toInt(txn.fee);
+        const grossAmount = qty * unitPrice;
+        const totalAmount = grossAmount + fee;
 
-      ["txName","txTicker","txQty","txUnitPrice","txMemo"].forEach(id => document.getElementById(id).value = "");
-      document.getElementById("txTradeType").value = "매수";
-      updateTransactionNameSuggestions();
-      syncChartHoldingOptions();
-      setDefaultTransactionDate();
-      setLastUpdateText();
-      render();
-    }
+        if (txn.action === "BUY") {
+          item.quantity += qty;
+          item.total_cost += totalAmount;
+          item.buy_amount += totalAmount;
+        }
 
-    async function deleteHolding() {
-      alert("이제 보유종목은 거래기록 기준으로 관리하는 구조라서, 보유종목 직접 삭제 대신 해당 거래기록을 삭제해줘.");
-    }
+        if (txn.action === "SELL") {
+          if (qty <= 0) continue;
+          if (item.quantity <= 0 || item.total_cost < 0) continue;
 
-    async function deleteTransaction(id) {
-      const tx = transactions.find(t => t.id === id);
-      if (!tx) return;
-      if (!confirm("이 거래기록을 삭제하면 보유종목과 월별 투자기록에도 다시 반영돼. 계속할까?")) return;
+          const sellQty = Math.min(qty, item.quantity);
+          const beforeQty = item.quantity;
+          const beforeCost = item.total_cost;
 
-      const { error } = await db.from("transactions").delete().eq("id", id);
-      if (error) return alert("거래기록 삭제 실패: " + error.message);
-      transactions = transactions.filter(t => t.id !== id);
+          let costToRemove = 0;
 
-      let synced = false;
-      if ((tx.trade_type || "매수") === "매수") synced = await rollbackBuyFromHolding(tx);
-      if ((tx.trade_type || "매수") === "매도") synced = await rollbackSellFromHolding(tx);
-      if (!synced) return;
+          if (sellQty >= beforeQty) {
+            costToRemove = beforeCost;
+          } else {
+            // 비율 안분 -> 정수 반올림
+            costToRemove = Math.round((beforeCost * sellQty) / beforeQty);
+          }
 
-      await syncMonthlyInvestmentFromTransaction(tx, -1);
-      syncChartHoldingOptions();
-      setLastUpdateText();
-      render();
-    }
+          const sellProceeds = grossAmount - fee; // 매도수수료 차감
+          const realized = sellProceeds - costToRemove;
 
-    async function updateField(id, field, value) {
-      const item = holdings.find(h => h.id === id);
-      if (!item) return;
-      let updateValue = value;
-      if (["qty", "buy", "price", "dividendYield", "expectedDividendPerShare", "dividendPerPayment"].includes(field)) updateValue = num(value);
-      item[field] = updateValue;
-      if (["name", "ticker", "account"].includes(field)) item.assetType = classifyAsset(item.name, item.ticker, item.account);
-      const updatePayload = { account: item.account, assetType: item.assetType, name: item.name, ticker: item.ticker, qty: num(item.qty), buy: num(item.buy), price: num(item.price), expectedDividendPerShare: num(item.expectedDividendPerShare), dividendYield: num(item.dividendYield), dividendCycle: item.dividendCycle || "직접입력", dividendPerPayment: num(item.dividendPerPayment) };
-      const { error } = await db.from("holdings").update(updatePayload).eq("id", id);
-      if (error) return alert("수정 저장 실패: " + error.message);
-      updateTransactionNameSuggestions();
-      syncChartHoldingOptions();
-      render();
-    }
+          item.quantity = beforeQty - sellQty;
+          item.total_cost = beforeCost - costToRemove;
+          item.sell_amount += sellProceeds;
+          item.realized_pnl += realized;
 
-    async function updateOnePrice(id) {
-      const item = holdings.find(h => h.id === id);
-      if (!item) return;
-      if (isManualGold(item)) return alert("금현물은 현재가(1g)를 직접 입력해줘.");
-      if (!item.ticker) return;
-      const latest = await fetchPriceFromWorker(item.ticker);
-      if (!latest) return alert("가격을 불러오지 못했어.");
-      item.price = latest;
-      const { error } = await db.from("holdings").update({ price: latest }).eq("id", item.id);
-      if (error) return alert("가격 저장 실패: " + error.message);
-      setLastUpdateText();
-      render();
-    }
-
-    async function updateAllPrices(showAlert = true) {
-      for (const h of holdings) {
-        if (!h.ticker || isManualGold(h)) continue;
-        const latest = await fetchPriceFromWorker(h.ticker);
-        if (latest) {
-          h.price = latest;
-          const { error } = await db.from("holdings").update({ price: latest }).eq("id", h.id);
-          if (error) console.error(error);
+          if (item.quantity <= 0) {
+            item.quantity = 0;
+            item.total_cost = 0;
+          }
+          if (item.total_cost < 0) {
+            item.total_cost = 0;
+          }
         }
       }
-      setLastUpdateText();
-      render();
-      if (showAlert) alert("ETF 가격 업데이트 완료!");
+
+      const holdings = [...map.values()]
+        .filter(item => item.quantity > 0)
+        .map(item => {
+          const currentPrice = toInt(quoteMap[item.ticker]?.price || 0);
+          const marketValue = item.quantity * currentPrice;
+          const pnl = marketValue - item.total_cost;
+          const returnRate = item.total_cost > 0 ? (pnl / item.total_cost) * 100 : 0;
+          const avgPrice = item.quantity > 0 ? Math.round(item.total_cost / item.quantity) : 0;
+
+          return {
+            ...item,
+            current_price: currentPrice,
+            market_value: marketValue,
+            pnl,
+            return_rate: returnRate,
+            avg_price: avgPrice
+          };
+        });
+
+      return holdings.sort((a, b) => b.market_value - a.market_value);
     }
 
-    function renderSummary() {
-      const totalBuy = holdings.reduce((s, h) => s + num(h.buy), 0);
-      const totalValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      const totalProfit = totalValue - totalBuy;
-      const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
-      document.getElementById("sumBuy").textContent = won(totalBuy);
-      document.getElementById("sumValue").textContent = won(totalValue);
-      document.getElementById("sumProfit").textContent = won(totalProfit);
-      document.getElementById("sumProfit").className = "value " + (totalProfit >= 0 ? "profit" : "loss");
-      document.getElementById("sumRate").textContent = pct(totalRate);
-      document.getElementById("sumRate").className = "value " + (totalRate >= 0 ? "profit" : "loss");
-      document.getElementById("sumCount").textContent = holdings.length.toLocaleString("ko-KR") + "개";
-    }
+    /****************************************************************
+     * Supabase
+     ****************************************************************/
+    async function loadTransactions() {
+      const { data, error } = await supabaseClient
+        .from("transactions")
+        .select("*")
+        .order("trade_date", { ascending: false })
+        .order("created_at", { ascending: false });
 
-    function renderOneAccountSummary(items, valueId, profitId, rateId) {
-      const totalBuy = items.reduce((s, h) => s + num(h.buy), 0);
-      const totalValue = items.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      const totalProfit = totalValue - totalBuy;
-      const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
-      document.getElementById(valueId).textContent = won(totalValue);
-      document.getElementById(profitId).textContent = won(totalProfit);
-      document.getElementById(profitId).className = "value " + (totalProfit >= 0 ? "profit" : "loss");
-      document.getElementById(rateId).textContent = pct(totalRate);
-      document.getElementById(rateId).className = "value " + (totalRate >= 0 ? "profit" : "loss");
-    }
-
-    function renderAccountSummary() {
-      renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaValue", "isaProfit", "isaRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionValue", "pensionProfit", "pensionRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldValue", "goldProfit", "goldRate");
-    }
-
-    function renderDividendSummary() {
-      const dividendItems = holdings.filter(h => h.account !== "금현물계좌").filter(h => calcExpectedDividendPerShare(h) > 0 || num(h.dividendYield) > 0);
-      const yearly = dividendItems.reduce((s, h) => {
-        const expectedPerShare = calcExpectedDividendPerShare(h);
-        if (expectedPerShare > 0) return s + num(h.qty) * expectedPerShare;
-        const value = num(h.qty) * num(h.price);
-        return s + value * (num(h.dividendYield) / 100);
-      }, 0);
-      const base = dividendItems.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      document.getElementById("dividendYear").textContent = won(yearly);
-      document.getElementById("dividendMonth").textContent = won(yearly / 12);
-      document.getElementById("dividendCount").textContent = dividendItems.length + "개";
-      document.getElementById("dividendBase").textContent = won(base);
-    }
-
-    function renderHoldingsColGroup(isGoldAccount) {
-      if (isGoldAccount) {
-        return `
-          <colgroup>
-            <col class="account-cell">
-            <col class="asset-cell">
-            <col class="name-cell">
-            <col class="ticker-cell">
-            <col class="qty-cell">
-            <col class="buy-cell">
-            <col class="avg-cell">
-            <col class="price-cell">
-            <col class="value-cell">
-            <col class="profit-cell">
-            <col class="rate-cell">
-            <col class="weight-cell">
-            <col class="action-cell">
-            <col class="action-cell">
-          </colgroup>
-        `;
-      }
-
-      return `
-        <colgroup>
-          <col class="account-cell">
-          <col class="asset-cell">
-          <col class="name-cell">
-          <col class="ticker-cell">
-          <col class="qty-cell">
-          <col class="buy-cell">
-          <col class="avg-cell">
-          <col class="price-cell">
-          <col class="value-cell">
-          <col class="profit-cell">
-          <col class="rate-cell">
-          <col class="weight-cell">
-          <col class="cycle-cell">
-          <col class="dividend-per-payment-cell">
-          <col class="dividend-input-cell">
-          <col class="dividend-value-cell">
-          <col class="action-cell">
-          <col class="action-cell">
-        </colgroup>
-      `;
-    }
-
-    function getTableRows(accountItems, totalPortfolioValue, accountName) {
-      return accountItems.map(h => {
-        const isGoldAccount = accountName === "금현물계좌";
-        const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
-        const value = num(h.qty) * num(h.price);
-        const profit = value - num(h.buy);
-        const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
-        const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
-        const cycle = h.dividendCycle || "직접입력";
-        const dividendPerPayment = num(h.dividendPerPayment);
-        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
-        const fallbackYield = num(h.dividendYield);
-        const yearlyDividend = expectedDividendPerShare > 0 ? num(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
-        const derivedDividendYield = expectedDividendPerShare > 0 ? (num(h.price) > 0 ? (expectedDividendPerShare / num(h.price)) * 100 : 0) : fallbackYield;
-        const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
-
-        return `
-          <tr>
-            <td class="account-cell"><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option></select></td>
-            <td class="asset-cell"><select onchange="updateField(${h.id}, 'assetType', this.value)"><option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option><option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option><option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option><option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option><option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option></select></td>
-            <td class="name-cell"><input value="${esc(h.name)}" title="${esc(h.name)}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
-            <td class="ticker-cell"><input value="${esc(h.ticker || "")}" title="${esc(h.ticker || "")}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
-            <td class="qty-cell num"><input type="number" step="any" value="${num(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
-            <td class="buy-cell num"><input type="number" step="any" value="${num(h.buy)}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
-            <td class="avg-cell num">${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}</td>
-            <td class="price-cell num"><input type="number" step="any" value="${num(h.price)}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
-            <td class="value-cell num">${won(value)}</td>
-            <td class="profit-cell num ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</td>
-            <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
-            <td class="weight-cell num">${pct(weight)}</td>
-            ${!isGoldAccount ? `
-              <td class="cycle-cell"><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></td>
-              <td class="dividend-per-payment-cell num"><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></td>
-              <td class="dividend-input-cell num"><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></td>
-              <td class="dividend-value-cell num">${won(yearlyDividend)}<br><span class="muted">${pct(derivedDividendYield)}</span></td>
-            ` : ``}
-            <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
-            <td class="action-cell"><button class="danger" onclick="deleteHolding(${h.id})">삭제</button></td>
-          </tr>`;
-      }).join("");
-    }
-
-    function getMobileCards(accountItems, totalPortfolioValue, accountName) {
-      return accountItems.map(h => {
-        const isGoldAccount = accountName === "금현물계좌";
-        const avg = num(h.qty) > 0 ? num(h.buy) / num(h.qty) : 0;
-        const value = num(h.qty) * num(h.price);
-        const profit = value - num(h.buy);
-        const rate = num(h.buy) > 0 ? (profit / num(h.buy)) * 100 : 0;
-        const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
-        const cycle = h.dividendCycle || "직접입력";
-        const dividendPerPayment = num(h.dividendPerPayment);
-        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
-        const fallbackYield = num(h.dividendYield);
-        const yearlyDividend = expectedDividendPerShare > 0 ? num(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
-        const derivedDividendYield = expectedDividendPerShare > 0 ? (num(h.price) > 0 ? (expectedDividendPerShare / num(h.price)) * 100 : 0) : fallbackYield;
-        const updateButtonLabel = isManualGold(h) ? "수동" : "가격갱신";
-
-        return `
-          <details class="holding-mobile-card">
-            <summary>
-              <div class="holding-mobile-top">
-                <div>
-                  <div class="holding-mobile-name">${esc(h.name)}</div>
-                  <div class="holding-mobile-ticker">${esc(h.ticker || "-")}</div>
-                </div>
-                <div class="holding-mobile-rate ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</div>
-              </div>
-
-              <div class="holding-mobile-meta">
-                <span class="holding-mobile-chip">${esc(h.account)}</span>
-                <span class="holding-mobile-chip">${esc(h.assetType)}</span>
-                <span class="holding-mobile-chip">수량 ${num(h.qty).toLocaleString("ko-KR")}</span>
-              </div>
-
-              <div class="holding-mobile-grid">
-                <div class="holding-mobile-stat"><div class="label">매입금</div><div class="value">${won(h.buy)}</div></div>
-                <div class="holding-mobile-stat"><div class="label">평가금</div><div class="value">${won(value)}</div></div>
-                <div class="holding-mobile-stat"><div class="label">손익</div><div class="value ${profit >= 0 ? "profit" : "loss"}">${won(profit)}</div></div>
-                <div class="holding-mobile-stat"><div class="label">현재가</div><div class="value">${won(h.price)}</div></div>
-              </div>
-            </summary>
-
-            <div class="holding-mobile-detail">
-              <div class="holding-mobile-edit-grid">
-                <div><label>계좌</label><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option></select></div>
-                <div><label>자산군</label><select onchange="updateField(${h.id}, 'assetType', this.value)"><option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option><option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option><option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option><option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option><option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option></select></div>
-                <div><label>종목명</label><input value="${esc(h.name)}" onchange="updateField(${h.id}, 'name', this.value)" /></div>
-                <div><label>티커</label><input value="${esc(h.ticker || "")}" onchange="updateField(${h.id}, 'ticker', this.value)" /></div>
-                <div><label>수량</label><input type="number" step="any" value="${num(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" /></div>
-                <div><label>총 매입금</label><input type="number" step="any" value="${num(h.buy)}" onchange="updateField(${h.id}, 'buy', this.value)" /></div>
-                <div><label>평균단가</label><input value="${avg.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}" readonly /></div>
-                <div><label>현재가</label><input type="number" step="any" value="${num(h.price)}" onchange="updateField(${h.id}, 'price', this.value)" /></div>
-                <div><label>평가금</label><input value="${won(value)}" readonly /></div>
-                <div><label>보유비중</label><input value="${pct(weight)}" readonly /></div>
-                <div><label>손익</label><input value="${won(profit)}" readonly /></div>
-                <div><label>수익률</label><input value="${pct(rate)}" readonly /></div>
-
-                ${!isGoldAccount ? `
-                  <div><label>배당주기</label><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></div>
-                  <div><label>1회주당배당</label><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></div>
-                  <div><label>올해예상주당배당</label><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></div>
-                  <div><label>예상배당 / 수익률</label><input value="${won(yearlyDividend)} / ${pct(derivedDividendYield)}" readonly /></div>
-                ` : ""}
-              </div>
-
-              <div class="holding-mobile-actions">
-                <button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button>
-                <button class="danger" onclick="deleteHolding(${h.id})">삭제</button>
-              </div>
-            </div>
-          </details>`;
-      }).join("");
-    }
-
-    function renderSortableHeader(accountName, key, label, className = "") {
-      return `<th class="${className} sortable" onclick="setHoldingsSort('${accountName}', '${key}')">${label}${getSortIndicator(accountName, key)}</th>`;
-    }
-
-    function renderHoldingsSections() {
-      const container = document.getElementById("holdingsSections");
-      const totalPortfolioValue = holdings.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      const rawSections = [
-        { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
-        { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
-        { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }
-      ];
-
-      container.innerHTML = rawSections.map(section => {
-        const isGoldAccount = section.title === "금현물계좌";
-        const sortedItems = sortHoldingsItems(section.items, section.title, totalPortfolioValue);
-        const isExpanded = expandedAccounts[section.title];
-        const visibleItems = isExpanded ? sortedItems : sortedItems.slice(0, HOLDINGS_PREVIEW_COUNT);
-        const rows = getTableRows(visibleItems, totalPortfolioValue, section.title);
-        const mobileCards = getMobileCards(visibleItems, totalPortfolioValue, section.title);
-        const hiddenCount = Math.max(sortedItems.length - HOLDINGS_PREVIEW_COUNT, 0);
-
-        return `
-          <div class="account-section">
-            <div class="account-section-title">${section.title}</div>
-            ${sortedItems.length === 0 ? `<div class="empty-text">등록된 종목이 없어.</div>` : `
-              <div class="holdings-desktop">
-                <div class="table-wrap">
-                  <table class="holdings-table ${isGoldAccount ? "gold-only" : "standard"}">
-                    ${renderHoldingsColGroup(isGoldAccount)}
-                    <thead>
-                      <tr>
-                        <th class="account-cell">계좌</th>
-                        <th class="asset-cell">자산군</th>
-                        <th class="name-cell">종목명</th>
-                        <th class="ticker-cell">티커</th>
-                        ${renderSortableHeader(section.title, "qty", "수량", "qty-cell")}
-                        ${renderSortableHeader(section.title, "buy", "총 매입금", "buy-cell num")}
-                        ${renderSortableHeader(section.title, "avg", "평균단가", "avg-cell num")}
-                        ${renderSortableHeader(section.title, "price", "현재가", "price-cell num")}
-                        ${renderSortableHeader(section.title, "value", "평가금", "value-cell num")}
-                        ${renderSortableHeader(section.title, "profit", "손익", "profit-cell num")}
-                        ${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}
-                        ${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}
-                        ${!isGoldAccount ? `
-                          <th class="cycle-cell">배당주기</th>
-                          <th class="dividend-per-payment-cell num">1회주당배당</th>
-                          <th class="dividend-input-cell num">올해예상주당배당</th>
-                          <th class="dividend-value-cell num">예상배당 / 수익률</th>
-                        ` : ""}
-                        <th class="action-cell">가격갱신</th>
-                        <th class="action-cell">삭제</th>
-                      </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div class="holdings-mobile">
-                <div class="holding-mobile-list">${mobileCards}</div>
-              </div>
-
-              ${sortedItems.length > HOLDINGS_PREVIEW_COUNT ? `
-                <div class="btn-row holdings-toggle-row" style="margin-top:10px;">
-                  <button type="button" class="secondary holdings-toggle-btn" onclick="toggleAccountSection('${section.title}')">
-                    ${isExpanded ? `▲ ${section.title} 접기` : `▼ ${section.title} 전체 보기 (추가 ${hiddenCount}개)`}
-                  </button>
-                </div>
-              ` : ""}
-            `}
-          </div>`;
-      }).join("");
-    }
-
-    function renderTransactions() {
-      const body = document.getElementById("transactionsBody");
-      const btn = document.getElementById("toggleTransactionsBtn");
-      const meta = document.getElementById("transactionsMeta");
-
-      if (!transactions.length) {
-        body.innerHTML = `<tr><td colspan="10" class="empty-text">거래기록이 없어.</td></tr>`;
-        meta.textContent = "거래기록 0건";
-        btn.textContent = "전체보기";
+      if (error) {
+        console.error(error);
+        alert("거래기록 불러오기에 실패했어요.");
         return;
       }
 
-      const visible = showAllTransactions ? transactions : transactions.slice(0, 7);
-      meta.textContent = showAllTransactions ? `전체 ${transactions.length}건 표시` : `최근 ${visible.length}건 표시 / 전체 ${transactions.length}건`;
-      btn.textContent = showAllTransactions ? "최근만 보기" : "전체보기";
-
-      body.innerHTML = visible.map(t => `
-        <tr>
-          <td>${esc(t.trade_date || "")}</td>
-          <td>${esc(t.account || "")}</td>
-          <td>${esc(t.name || "")}</td>
-          <td>${esc(t.ticker || "")}</td>
-          <td>${esc(t.trade_type || "매수")}</td>
-          <td class="num">${num(t.quantity).toLocaleString("ko-KR")}</td>
-          <td class="num">${won(t.unit_price)}</td>
-          <td class="num">${won(t.total_amount)}</td>
-          <td>${esc(t.memo || "")}</td>
-          <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
-        </tr>`).join("");
+      transactions = data || [];
     }
 
-    function toggleTransactionsView() {
-      showAllTransactions = !showAllTransactions;
-      renderTransactions();
+    async function insertTransaction(payload) {
+      const { error } = await supabaseClient
+        .from("transactions")
+        .insert([payload]);
+
+      if (error) {
+        console.error(error);
+        alert(`저장 실패: ${error.message}`);
+        return false;
+      }
+      return true;
     }
 
-    function buildAssetTotals(items) {
-      const totals = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
-      items.forEach(h => {
-        const value = num(h.qty) * num(h.price);
-        totals[h.assetType] = (totals[h.assetType] || 0) + value;
-      });
-      return totals;
-    }
+    async function toggleRollback(id, nextValue) {
+      const confirmMessage = nextValue
+        ? "이 거래를 롤백 처리할까요?"
+        : "이 거래의 롤백을 해제할까요?";
 
-    function renderPieChartForItems(canvasId, currentChart, items) {
-      const totals = buildAssetTotals(items);
-      const labels = Object.keys(totals).filter(k => totals[k] > 0);
-      const data = labels.map(k => totals[k]);
-      const ctx = document.getElementById(canvasId);
+      if (!confirm(confirmMessage)) return;
 
-      if (currentChart) currentChart.destroy();
+      const { error } = await supabaseClient
+        .from("transactions")
+        .update({ is_rolled_back: nextValue })
+        .eq("id", id);
 
-      if (!labels.length) {
-        return new Chart(ctx, {
-          type: "pie",
-          data: { labels: ["없음"], datasets: [{ data: [1] }] },
-          options: { responsive: true, maintainAspectRatio: false, layout: { padding: 8 }, plugins: { legend: { position: "bottom" } } }
-        });
+      if (error) {
+        console.error(error);
+        alert(`롤백 처리 실패: ${error.message}`);
+        return;
       }
 
-      return new Chart(ctx, {
-        type: "pie",
-        data: { labels, datasets: [{ data }] },
-        options: { responsive: true, maintainAspectRatio: false, layout: { padding: 8 }, plugins: { legend: { position: "bottom" } } }
-      });
+      await refreshAll(false);
     }
 
-    function renderAccountCharts() {
-      isaAssetChart = renderPieChartForItems("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
-      pensionAssetChart = renderPieChartForItems("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
+    async function deleteTransaction(id) {
+      if (!confirm("이 거래기록을 삭제할까요? 삭제 후 복구가 어려울 수 있어요.")) return;
+
+      const { error } = await supabaseClient
+        .from("transactions")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(error);
+        alert(`삭제 실패: ${error.message}`);
+        return;
+      }
+
+      await refreshAll(false);
     }
 
-    function renderRebalanceTitles() {
-      const isaTotal = holdings.filter(h => h.account === "ISA").reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
-      const pensionTotal = holdings.filter(h => h.account === "연금저축").reduce((sum, h) => sum + num(h.qty) * num(h.price), 0);
-      document.getElementById("isaRebalanceTitle").textContent = `ISA 리밸런싱 : 총금액 ${won(isaTotal)}`;
-      document.getElementById("pensionRebalanceTitle").textContent = `연금저축 리밸런싱 : 총금액 ${won(pensionTotal)}`;
-    }
+    /****************************************************************
+     * 현재가 조회
+     ****************************************************************/
+    async function fetchQuotes() {
+      const tickers = [...new Set(
+        transactions
+          .filter(t => !t.is_rolled_back)
+          .map(t => (t.ticker || "").trim())
+          .filter(Boolean)
+      )];
 
-    function applySavedTargetsToInputs() {
-      ensureAccountTargets();
-      document.getElementById("isaTargetStock").value = accountTargets["ISA"].stock ?? 60;
-      document.getElementById("isaTargetBond").value = accountTargets["ISA"].bond ?? 20;
-      document.getElementById("isaTargetGold").value = accountTargets["ISA"].gold ?? 10;
-      document.getElementById("isaTargetDollar").value = accountTargets["ISA"].dollar ?? 5;
-      document.getElementById("isaTargetREIT").value = accountTargets["ISA"].reit ?? 5;
-      document.getElementById("pensionTargetStock").value = accountTargets["연금저축"].stock ?? 60;
-      document.getElementById("pensionTargetBond").value = accountTargets["연금저축"].bond ?? 20;
-      document.getElementById("pensionTargetGold").value = accountTargets["연금저축"].gold ?? 10;
-      document.getElementById("pensionTargetDollar").value = accountTargets["연금저축"].dollar ?? 5;
-      document.getElementById("pensionTargetREIT").value = accountTargets["연금저축"].reit ?? 5;
-    }
+      if (!tickers.length) {
+        quoteMap = {};
+        return;
+      }
 
-    async function saveAccountTargets(account, values) {
-      const payload = { account, stock: num(values.stock), bond: num(values.bond), gold: num(values.gold), dollar: num(values.dollar), reit: num(values.reit) };
-      const { error } = await db.from("account_targets").upsert(payload, { onConflict: "account" });
-      if (error) throw error;
-      await loadAccountTargetsFromSupabase();
-    }
-
-    async function saveTargetsAndRender(account) {
       try {
-        ensureAccountTargets();
-        if (account === "ISA") {
-          await saveAccountTargets("ISA", {
-            stock: document.getElementById("isaTargetStock").value,
-            bond: document.getElementById("isaTargetBond").value,
-            gold: document.getElementById("isaTargetGold").value,
-            dollar: document.getElementById("isaTargetDollar").value,
-            reit: document.getElementById("isaTargetREIT").value
-          });
-        }
-        if (account === "연금저축") {
-          await saveAccountTargets("연금저축", {
-            stock: document.getElementById("pensionTargetStock").value,
-            bond: document.getElementById("pensionTargetBond").value,
-            gold: document.getElementById("pensionTargetGold").value,
-            dollar: document.getElementById("pensionTargetDollar").value,
-            reit: document.getElementById("pensionTargetREIT").value
-          });
-        }
-        applySavedTargetsToInputs();
-        renderAllRebalances();
-        renderRebalanceTitles();
-        alert("목표 비중 저장 완료!");
+        const url = `${WORKER_QUOTE_URL}?symbols=${encodeURIComponent(tickers.join(","))}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("quote fetch failed");
+
+        const data = await res.json();
+
+        // 기대 형식 예시:
+        // {
+        //   "069500.KS": { "price": 41230, "name": "KODEX 200" },
+        //   "360750.KS": { "price": 12345, "name": "TIGER 미국S&P500" }
+        // }
+        quoteMap = data || {};
       } catch (err) {
-        alert("목표 비중 저장 실패: " + err.message);
+        console.error(err);
+        alert("현재가 조회에 실패했어요. Worker URL을 확인해줘.");
       }
     }
 
-    function renderRebalanceForAccount(account, resultId) {
-      const items = holdings.filter(h => h.account === account);
-      const totalValue = items.reduce((s, h) => s + num(h.qty) * num(h.price), 0);
-      const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
-      items.forEach(h => { current[h.assetType] = (current[h.assetType] || 0) + num(h.qty) * num(h.price); });
-      const targets = accountTargets[account] || { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
-      const targetMap = { 주식: targets.stock, 채권: targets.bond, 금: targets.gold, 달러: targets.dollar, 리츠: targets.reit };
-      if (totalValue <= 0) { document.getElementById(resultId).innerHTML = `<div class="empty-text">보유 종목이 없어.</div>`; return; }
-      let html = "";
-      ["주식", "채권", "금", "달러", "리츠"].forEach(type => {
-        const nowValue = current[type] || 0;
-        const nowWeight = totalValue > 0 ? (nowValue / totalValue) * 100 : 0;
-        const targetWeight = num(targetMap[type]);
-        const targetValue = totalValue * (targetWeight / 100);
-        const diff = targetValue - nowValue;
-        let actionText = "유지";
-        let actionClass = "";
-        if (diff > 0) { actionText = `매수 ${won(diff)}`; actionClass = "profit"; }
-        else if (diff < 0) { actionText = `매도 ${won(Math.abs(diff))}`; actionClass = "loss"; }
-        html += `<div><strong>${type}</strong> | 현재 ${nowWeight.toFixed(2)}% (${won(nowValue)}) | 목표 ${targetWeight.toFixed(2)}% (${won(targetValue)}) | <span class="${actionClass}">${actionText}</span></div>`;
+    /****************************************************************
+     * 렌더링
+     ****************************************************************/
+    function getFilteredHoldings() {
+      const holdings = deriveHoldingsFromTransactions(transactions);
+      const accountFilter = $("holdingAccountFilter").value;
+      const keyword = $("holdingSearch").value.trim().toLowerCase();
+
+      return holdings.filter(item => {
+        const matchAccount = accountFilter === "ALL" || item.account_type === accountFilter;
+        const matchKeyword =
+          !keyword ||
+          item.name.toLowerCase().includes(keyword) ||
+          item.ticker.toLowerCase().includes(keyword);
+        return matchAccount && matchKeyword;
       });
-      document.getElementById(resultId).innerHTML = html;
     }
 
-    function renderAllRebalances() {
-      renderRebalanceForAccount("ISA", "isaRebalanceResult");
-      renderRebalanceForAccount("연금저축", "pensionRebalanceResult");
-    }
+    function renderSummary(holdings) {
+      const totalCost = holdings.reduce((sum, item) => sum + toInt(item.total_cost), 0);
+      const marketValue = holdings.reduce((sum, item) => sum + toInt(item.market_value), 0);
+      const pnl = marketValue - totalCost;
+      const rate = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
 
-    async function addMonthlyInvestment() {
-      const month = document.getElementById("investMonth").value;
-      const amount = num(document.getElementById("investAmount").value);
-      if (!month || !amount) return alert("월과 투자금을 입력해줘.");
-      try {
-        await addOrUpdateMonthlyInvestment(month, amount);
-        document.getElementById("investMonth").value = "";
-        document.getElementById("investAmount").value = "";
-        renderMonthlyTable();
-        renderMonthlyChart();
-      } catch (err) {
-        alert("월별 투자기록 저장 실패: " + err.message);
+      $("summaryTotalCost").textContent = formatKRW(totalCost);
+      $("summaryMarketValue").textContent = formatKRW(marketValue);
+      $("summaryPnL").textContent = (pnl >= 0 ? "+" : "") + formatKRW(pnl);
+      $("summaryReturnRate").textContent = formatPercent(rate);
+
+      $("summaryPnL").classList.remove("positive", "negative");
+      $("summaryReturnRate").classList.remove("positive", "negative");
+
+      if (pnl > 0) {
+        $("summaryPnL").classList.add("positive");
+        $("summaryReturnRate").classList.add("positive");
+      } else if (pnl < 0) {
+        $("summaryPnL").classList.add("negative");
+        $("summaryReturnRate").classList.add("negative");
       }
     }
 
-    async function deleteMonthlyInvestment(id) {
-      const { error } = await db.from("monthly_investments").delete().eq("id", id);
-      if (error) return alert("월별 투자기록 삭제 실패: " + error.message);
-      await loadMonthlyInvestmentsFromSupabase();
-      renderMonthlyTable();
-      renderMonthlyChart();
+    function renderHoldings() {
+      const holdings = getFilteredHoldings();
+      renderSummary(holdings);
+
+      const tbody = $("holdingsTableBody");
+      const cards = $("holdingsCards");
+
+      tbody.innerHTML = "";
+      cards.innerHTML = "";
+
+      if (!holdings.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="dim">보유종목이 없습니다.</td></tr>`;
+        cards.innerHTML = `<div class="holding-card dim">보유종목이 없습니다.</div>`;
+        renderAllocationChart([]);
+        return;
+      }
+
+      for (const item of holdings) {
+        const pnlClass = item.pnl > 0 ? "color: var(--green);" : item.pnl < 0 ? "color: var(--red);" : "";
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${escapeHtml(item.account_type)}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.ticker)}</td>
+          <td class="num">${formatNumber(item.quantity)}</td>
+          <td class="num">${formatKRW(item.avg_price)}</td>
+          <td class="num">${formatKRW(item.total_cost)}</td>
+          <td class="num">${formatKRW(item.current_price)}</td>
+          <td class="num">${formatKRW(item.market_value)}</td>
+          <td class="num" style="${pnlClass}">${item.pnl >= 0 ? "+" : ""}${formatKRW(item.pnl)}</td>
+          <td class="num" style="${pnlClass}">${formatPercent(item.return_rate)}</td>
+        `;
+        tbody.appendChild(row);
+
+        const card = document.createElement("div");
+        card.className = "holding-card";
+        card.innerHTML = `
+          <div class="holding-top">
+            <div>
+              <div class="holding-name">${escapeHtml(item.name)}</div>
+              <div class="holding-ticker">${escapeHtml(item.ticker)} · ${escapeHtml(item.account_type)}</div>
+            </div>
+          </div>
+          <div class="kv">
+            <div class="k">보유수량</div><div class="v">${formatNumber(item.quantity)}</div>
+            <div class="k">평균단가</div><div class="v">${formatKRW(item.avg_price)}</div>
+            <div class="k">총매입금</div><div class="v">${formatKRW(item.total_cost)}</div>
+            <div class="k">현재가</div><div class="v">${formatKRW(item.current_price)}</div>
+            <div class="k">평가금액</div><div class="v">${formatKRW(item.market_value)}</div>
+            <div class="k">평가손익</div><div class="v" style="${pnlClass}">${item.pnl >= 0 ? "+" : ""}${formatKRW(item.pnl)}</div>
+            <div class="k">수익률</div><div class="v" style="${pnlClass}">${formatPercent(item.return_rate)}</div>
+          </div>
+        `;
+        cards.appendChild(card);
+      }
+
+      renderAllocationChart(holdings);
     }
 
-    function renderMonthlyTable() {
-      const body = document.getElementById("monthlyBody");
-      body.innerHTML = monthlyInvestments.map(item => `
-        <tr>
-          <td>${esc(item.month)}</td>
-          <td class="num">${won(item.amount)}</td>
-          <td><button class="danger" onclick="deleteMonthlyInvestment(${item.id})">삭제</button></td>
-        </tr>`).join("") || `<tr><td colspan="3" class="empty-text">월별 투자기록이 없어.</td></tr>`;
-    }
+    function getFilteredTransactions() {
+      const accountFilter = $("txnAccountFilter").value;
+      const statusFilter = $("txnStatusFilter").value;
+      const keyword = $("txnSearch").value.trim().toLowerCase();
 
-    function renderMonthlyChart() {
-      const ctx = document.getElementById("monthlyChart");
-      const labels = monthlyInvestments.map(i => i.month);
-      const data = monthlyInvestments.map(i => num(i.amount));
-      if (monthlyChart) monthlyChart.destroy();
-      monthlyChart = new Chart(ctx, {
-        type: "line",
-        data: { labels, datasets: [{ label: "월별 투자금", data }] },
-        options: { responsive: true, plugins: { legend: { display: true } } }
+      return transactions.filter(txn => {
+        const matchAccount = accountFilter === "ALL" || txn.account_type === accountFilter;
+        const matchStatus =
+          statusFilter === "ALL" ||
+          (statusFilter === "ACTIVE" && !txn.is_rolled_back) ||
+          (statusFilter === "ROLLED_BACK" && txn.is_rolled_back);
+
+        const matchKeyword =
+          !keyword ||
+          (txn.name || "").toLowerCase().includes(keyword) ||
+          (txn.ticker || "").toLowerCase().includes(keyword);
+
+        return matchAccount && matchStatus && matchKeyword;
       });
     }
 
-    function syncChartHoldingOptions() {
-      const select = document.getElementById("chartHoldingSelect");
-      if (!select) return;
-      const items = [...holdings].sort((a, b) => {
-        if (a.account !== b.account) return a.account.localeCompare(b.account, "ko");
-        return a.name.localeCompare(b.name, "ko");
-      });
-      select.innerHTML = `<option value="">보유종목 선택</option>` + items.map(h => {
-        const raw = `${h.account}||${h.name}||${h.ticker || ""}`;
-        return `<option value="${esc(raw)}">${esc(h.account)} · ${esc(h.name)}${h.ticker ? ` (${esc(h.ticker)})` : ""}</option>`;
-      }).join("");
+    function renderTransactions() {
+      const list = getFilteredTransactions();
+      const tbody = $("transactionsTableBody");
+      const cards = $("txnCards");
+
+      tbody.innerHTML = "";
+      cards.innerHTML = "";
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="12" class="dim">거래기록이 없습니다.</td></tr>`;
+        cards.innerHTML = `<div class="txn-card dim">거래기록이 없습니다.</div>`;
+        return;
+      }
+
+      for (const txn of list) {
+        const row = document.createElement("tr");
+        if (txn.is_rolled_back) row.classList.add("muted-row");
+
+        const amount = txnAmount(txn);
+        const badgeClass = txn.action === "BUY" ? "buy" : "sell";
+        const statusHtml = txn.is_rolled_back
+          ? `<span class="badge rollback">롤백</span>`
+          : `<span class="dim">정상</span>`;
+
+        row.innerHTML = `
+          <td>${escapeHtml(txn.trade_date)}</td>
+          <td>${escapeHtml(txn.account_type)}</td>
+          <td><span class="badge ${badgeClass}">${txn.action === "BUY" ? "매수" : "매도"}</span></td>
+          <td>${escapeHtml(txn.name || "")}</td>
+          <td>${escapeHtml(txn.ticker || "")}</td>
+          <td class="num">${formatNumber(txn.quantity)}</td>
+          <td class="num">${formatKRW(txn.unit_price)}</td>
+          <td class="num">${formatKRW(txn.fee)}</td>
+          <td class="num">${formatKRW(amount)}</td>
+          <td>${statusHtml}</td>
+          <td>${escapeHtml(txn.memo || "")}</td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-orange" onclick="toggleRollback('${txn.id}', ${!txn.is_rolled_back})">
+                ${txn.is_rolled_back ? "롤백해제" : "롤백"}
+              </button>
+              <button class="btn-red" onclick="deleteTransaction('${txn.id}')">삭제</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+
+        const card = document.createElement("div");
+        card.className = `txn-card ${txn.is_rolled_back ? "muted-row" : ""}`;
+        card.innerHTML = `
+          <div class="txn-top">
+            <div>
+              <div class="txn-name">${escapeHtml(txn.name || "-")}</div>
+              <div class="txn-sub">${escapeHtml(txn.ticker || "")} · ${escapeHtml(txn.account_type)} · ${escapeHtml(txn.trade_date)}</div>
+            </div>
+            <div>
+              <span class="badge ${badgeClass}">${txn.action === "BUY" ? "매수" : "매도"}</span>
+            </div>
+          </div>
+          <div class="kv">
+            <div class="k">수량</div><div class="v">${formatNumber(txn.quantity)}</div>
+            <div class="k">단가</div><div class="v">${formatKRW(txn.unit_price)}</div>
+            <div class="k">수수료</div><div class="v">${formatKRW(txn.fee)}</div>
+            <div class="k">거래금액</div><div class="v">${formatKRW(amount)}</div>
+            <div class="k">상태</div><div class="v">${txn.is_rolled_back ? "롤백" : "정상"}</div>
+            <div class="k">메모</div><div class="v">${escapeHtml(txn.memo || "-")}</div>
+          </div>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn-orange" onclick="toggleRollback('${txn.id}', ${!txn.is_rolled_back})">
+              ${txn.is_rolled_back ? "롤백해제" : "롤백"}
+            </button>
+            <button class="btn-red" onclick="deleteTransaction('${txn.id}')">삭제</button>
+          </div>
+        `;
+        cards.appendChild(card);
+      }
     }
 
-    function normalizeChartInputTicker(rawTicker = "") {
-      return String(rawTicker || "").trim().toUpperCase();
-    }
+    function renderAllocationChart(holdings) {
+      const ctx = $("allocationChart").getContext("2d");
+      const labels = holdings.map(x => x.name);
+      const values = holdings.map(x => x.market_value);
 
-    function setChartRange(range, btnEl) {
-      selectedChartRange = range;
-      document.querySelectorAll(".range-row button").forEach(btn => btn.classList.remove("active"));
-      if (btnEl) btnEl.classList.add("active");
-    }
+      if (allocationChart) {
+        allocationChart.destroy();
+      }
 
-    function extractHistoryPoints(payload) {
-      let rawItems = [];
-      if (Array.isArray(payload)) rawItems = payload;
-      else if (Array.isArray(payload.prices)) rawItems = payload.prices;
-      else if (Array.isArray(payload.history)) rawItems = payload.history;
-      else if (Array.isArray(payload.items)) rawItems = payload.items;
-      else if (Array.isArray(payload.data)) rawItems = payload.data;
-
-      return rawItems.map(item => {
-        const date = item.date || item.trade_date || item.dt || item.timestamp || item.time || "";
-        const close = Number(item.close ?? item.price ?? item.value ?? item.adjClose ?? item.adj_close ?? 0);
-        return { date: String(date), close };
-      }).filter(item => item.date && Number.isFinite(item.close) && item.close > 0);
-    }
-
-    async function fetchHistoryFromWorker(ticker, range) {
-      const url = `${WORKER_URL}?ticker=${encodeURIComponent(ticker)}&type=history&range=${encodeURIComponent(range)}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`히스토리 조회 실패 (${res.status})`);
-      return res.json();
-    }
-
-    function clearSymbolChartSummary() {
-      document.getElementById("chartStartPrice").textContent = "-";
-      document.getElementById("chartEndPrice").textContent = "-";
-      document.getElementById("chartReturnRate").textContent = "-";
-      document.getElementById("chartReturnRate").className = "value";
-      document.getElementById("chartHighLow").textContent = "-";
-    }
-
-    function updateChartCurrentText(symbolText) {
-      document.getElementById("chartCurrentSymbolText").textContent = "현재 선택: " + (symbolText || "-");
-    }
-
-    function renderSymbolHistoryChart(points, labelText) {
-      const canvas = document.getElementById("symbolHistoryChart");
-      const ctx = canvas.getContext("2d");
-      const labels = points.map(p => p.date);
-      const prices = points.map(p => p.close);
-
-      if (symbolHistoryChart) symbolHistoryChart.destroy();
-
-      symbolHistoryChart = new Chart(ctx, {
-        type: "line",
+      allocationChart = new Chart(ctx, {
+        type: "doughnut",
         data: {
           labels,
           datasets: [{
-            label: labelText,
-            data: prices,
-            tension: 0.15,
-            pointRadius: selectedChartRange === "1W" ? 2 : 0,
-            borderWidth: 2,
-            fill: false
+            data: values
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          scales: {
-            x: { ticks: { maxTicksLimit: 8 } },
-            y: {
-              ticks: {
-                callback: value => Number(value).toLocaleString("ko-KR")
-              }
-            }
-          },
           plugins: {
-            legend: { display: true },
+            legend: {
+              position: "bottom"
+            },
             tooltip: {
               callbacks: {
-                label: context => `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString("ko-KR")}`
+                label: (context) => {
+                  const label = context.label || "";
+                  const value = context.parsed || 0;
+                  return `${label}: ${formatKRW(value)}`;
+                }
               }
             }
           }
@@ -1603,100 +1034,136 @@
       });
     }
 
-    function renderHistorySummary(points) {
-      if (!points.length) {
-        clearSymbolChartSummary();
+    /****************************************************************
+     * 저장
+     ****************************************************************/
+    async function handleSave() {
+      const trade_date = $("tradeDate").value;
+      const account_type = $("accountType").value;
+      const action = $("actionType").value;
+      const ticker = $("ticker").value.trim();
+      const name = $("name").value.trim();
+      const quantity = toInt($("quantity").value);
+      const unit_price = toInt($("unitPrice").value);
+      const fee = toInt($("fee").value);
+      const memo = $("memo").value.trim();
+
+      if (!trade_date) {
+        alert("거래일을 입력해줘.");
         return;
       }
-      const prices = points.map(p => p.close);
-      const start = prices[0];
-      const end = prices[prices.length - 1];
-      const high = Math.max(...prices);
-      const low = Math.min(...prices);
-      const rate = start > 0 ? ((end - start) / start) * 100 : 0;
+      if (!ticker) {
+        alert("티커를 입력해줘.");
+        return;
+      }
+      if (!name) {
+        alert("종목명을 입력해줘.");
+        return;
+      }
+      if (quantity <= 0) {
+        alert("수량은 1 이상이어야 해.");
+        return;
+      }
+      if (unit_price < 0) {
+        alert("단가를 확인해줘.");
+        return;
+      }
+      if (fee < 0) {
+        alert("수수료를 확인해줘.");
+        return;
+      }
 
-      document.getElementById("chartStartPrice").textContent = won(start);
-      document.getElementById("chartEndPrice").textContent = won(end);
-      document.getElementById("chartReturnRate").textContent = pct(rate);
-      document.getElementById("chartReturnRate").className = "value " + (rate >= 0 ? "profit" : "loss");
-      document.getElementById("chartHighLow").textContent = `${won(high)} / ${won(low)}`;
-    }
+      if (action === "SELL") {
+        const currentHoldings = deriveHoldingsFromTransactions(transactions);
+        const match = currentHoldings.find(h =>
+          h.account_type === account_type &&
+          h.ticker === ticker &&
+          h.name === name
+        );
 
-    async function loadSymbolChart() {
-      const tickerInput = document.getElementById("chartTickerInput");
-      const ticker = normalizeChartInputTicker(tickerInput.value);
-      if (!ticker) return alert("티커를 먼저 입력하거나 보유종목을 선택해줘.");
-
-      tickerInput.value = ticker;
-      updateChartCurrentText(ticker);
-
-      const status = document.getElementById("chartStatusText");
-      status.textContent = `차트 불러오는 중: ${ticker} / 기간 ${selectedChartRange}`;
-
-      try {
-        const payload = await fetchHistoryFromWorker(ticker, selectedChartRange);
-        const points = extractHistoryPoints(payload);
-
-        if (!points.length) {
-          if (symbolHistoryChart) {
-            symbolHistoryChart.destroy();
-            symbolHistoryChart = null;
-          }
-          clearSymbolChartSummary();
-          status.textContent = "차트 데이터가 없어. Worker 히스토리 응답 형식을 확인해줘.";
+        const holdQty = match?.quantity || 0;
+        if (holdQty < quantity) {
+          alert(`매도 수량이 보유 수량보다 많아요. 현재 보유수량: ${holdQty.toLocaleString("ko-KR")}`);
           return;
         }
-
-        renderSymbolHistoryChart(points, ticker);
-        renderHistorySummary(points);
-        status.textContent = `차트 표시 중: ${ticker} / 기간 ${selectedChartRange} / 데이터 ${points.length}건`;
-      } catch (err) {
-        if (symbolHistoryChart) {
-          symbolHistoryChart.destroy();
-          symbolHistoryChart = null;
-        }
-        clearSymbolChartSummary();
-        status.textContent = "차트 로딩 실패: " + err.message;
       }
+
+      const payload = {
+        trade_date,
+        account_type,
+        action,
+        ticker,
+        name,
+        quantity,
+        unit_price,
+        fee,
+        memo,
+        is_rolled_back: false
+      };
+
+      const ok = await insertTransaction(payload);
+      if (!ok) return;
+
+      resetForm(false);
+      await refreshAll(true);
     }
 
-    function render() {
-      renderSummary();
-      renderAccountSummary();
-      renderHoldingsSections();
+    function resetForm(resetDate = false) {
+      if (resetDate) $("tradeDate").value = todayYmd();
+      $("accountType").value = "ISA";
+      $("actionType").value = "BUY";
+      $("ticker").value = "";
+      $("name").value = "";
+      $("quantity").value = "";
+      $("unitPrice").value = "";
+      $("fee").value = "0";
+      $("memo").value = "";
+    }
+
+    /****************************************************************
+     * 전체 새로고침
+     ****************************************************************/
+    async function refreshAll(withQuote = true) {
+      await loadTransactions();
+      if (withQuote) {
+        await fetchQuotes();
+      }
+      renderHoldings();
       renderTransactions();
-      renderAccountCharts();
-      renderRebalanceTitles();
-      renderAllRebalances();
-      renderDividendSummary();
-      renderMonthlyTable();
-      renderMonthlyChart();
-      updateTransactionNameSuggestions();
-      syncChartHoldingOptions();
     }
 
-    document.getElementById("txAccount").addEventListener("change", () => {
-      updateTransactionNameSuggestions();
-      document.getElementById("txTicker").value = "";
-      autofillTransactionTickerFromName();
-    });
+    /****************************************************************
+     * 이벤트
+     ****************************************************************/
+    function bindEvents() {
+      $("saveBtn").addEventListener("click", handleSave);
+      $("resetBtn").addEventListener("click", () => resetForm(false));
+      $("refreshBtn").addEventListener("click", async () => {
+        await fetchQuotes();
+        renderHoldings();
+      });
 
-    document.getElementById("txName").addEventListener("input", autofillTransactionTickerFromName);
+      $("holdingAccountFilter").addEventListener("change", renderHoldings);
+      $("holdingSearch").addEventListener("input", renderHoldings);
 
-    document.getElementById("chartHoldingSelect").addEventListener("change", (e) => {
-      const raw = e.target.value;
-      if (!raw) return;
-      const [, , ticker] = raw.split("||");
-      document.getElementById("chartTickerInput").value = normalizeChartInputTicker(ticker || "");
-    });
+      $("txnAccountFilter").addEventListener("change", renderTransactions);
+      $("txnStatusFilter").addEventListener("change", renderTransactions);
+      $("txnSearch").addEventListener("input", renderTransactions);
+    }
 
-    setDefaultTransactionDate();
-    ensureAccountTargets();
-    clearSymbolChartSummary();
-    reloadAllData().catch(err => {
-      alert("초기 불러오기 실패: " + err.message + "\n\nmonthly_investments / account_targets 테이블 생성 여부도 확인해줘.");
-      console.error(err);
-    });
+    /****************************************************************
+     * 초기화
+     ****************************************************************/
+    async function init() {
+      $("tradeDate").value = todayYmd();
+      bindEvents();
+      await refreshAll(true);
+    }
+
+    window.toggleRollback = toggleRollback;
+    window.deleteTransaction = deleteTransaction;
+
+    init();
   </script>
 </body>
 </html>
