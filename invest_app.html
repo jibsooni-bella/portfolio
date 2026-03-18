@@ -24,6 +24,7 @@
     input, select, button { width: 100%; padding: 10px 12px; border: 1px solid #d7dce5; border-radius: 10px; font-size: 14px; background: #fff; }
     button { cursor: pointer; font-weight: 700; border: none; background: #2f6fed; color: #fff; }
     button.secondary { background: #eef3ff; color: #2f6fed; border: 1px solid #cfdcff; }
+    button.warning { background: #fff4e5; color: #b54708; border: 1px solid #f5d39c; }
     button.danger { background: #fce8e8; color: #b42318; border: 1px solid #f4c7c7; }
 
     .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -54,13 +55,12 @@
     }
 
     .table-wrap { overflow-x: auto; }
-
     table { width: 100%; border-collapse: collapse; }
     th, td { border-bottom: 1px solid #eceff5; padding: 10px 8px; text-align: center; vertical-align: middle; }
     th { background: #f8fafc; font-size: 14px; white-space: nowrap; }
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-    .transactions-table { min-width: 1100px; table-layout: fixed; }
+    .transactions-table { min-width: 1350px; table-layout: fixed; }
     .holdings-table { table-layout: fixed; }
     .holdings-table.standard { min-width: 1900px; }
     .holdings-table.gold-only { min-width: 1280px; }
@@ -103,6 +103,10 @@
     .rebalance-box { line-height: 1.8; font-size: 15px; min-height: 120px; }
     .last-update { font-size: 13px; color: #667085; margin-top: 10px; }
     .help-box { margin-top: 10px; padding: 12px; border-radius: 12px; background: #fff8e8; border: 1px solid #f3dfab; font-size: 13px; line-height: 1.6; }
+    .edit-mode-box {
+      margin-top: 12px; padding: 12px; border-radius: 12px;
+      background: #eef4ff; border: 1px solid #cfe0ff; font-size: 13px; line-height: 1.6;
+    }
 
     .account-section { margin-bottom: 18px; }
     .account-section:last-child { margin-bottom: 0; }
@@ -324,19 +328,56 @@
         <div><label for="txTicker">티커</label><input id="txTicker" placeholder="신규 종목은 입력 / 기존 종목은 비워도 됨" /></div>
         <div><label for="txQty">수량</label><input id="txQty" type="number" step="1" placeholder="예: 2" /></div>
       </div>
+
       <div class="grid-3" style="margin-top:10px;">
         <div><label for="txUnitPrice">1주 단가</label><input id="txUnitPrice" type="number" step="1" placeholder="예: 82000" /></div>
-        <div style="grid-column: span 2;"><label for="txMemo">메모</label><input id="txMemo" placeholder="예: 추가매수 / 일부매도 / 적립식 매수" /></div>
+        <div><label for="txTotalAmount">총금액</label><input id="txTotalAmount" type="number" step="1" placeholder="예: 500000" /></div>
+        <div><label for="txMemo">메모</label><input id="txMemo" placeholder="예: 추가매수 / 일부매도 / 적립식 매수" /></div>
       </div>
+
       <div class="btn-row">
-        <button onclick="addTransaction()">거래기록 저장</button>
+        <button id="txSaveBtn" onclick="saveTransaction()">거래기록 저장</button>
+        <button id="txCancelEditBtn" class="warning" style="display:none;" onclick="cancelTransactionEdit()">수정 취소</button>
         <button class="secondary" onclick="updateAllPrices()">ETF 가격 자동 업데이트</button>
         <button class="secondary" onclick="reloadAllData()">서버에서 다시 불러오기</button>
       </div>
-      <div class="notice">보유종목은 holdings를 기준으로 표시하고, 거래기록 저장/삭제 시 holdings를 직접 반영해.</div>
-      <div class="help-box">신규 종목 매수: 계좌 + 구분(매수) + 종목명 + 티커 + 수량 + 단가 입력<br>기존 종목 추가매수/매도: 종목명 선택 후 티커는 비워도 돼.</div>
-      <div class="help-box">매도는 보유수량 초과 입력 시 저장되지 않아. 월별 투자기록은 <strong>매수만</strong> 자동 반영돼.</div>
+
+      <div class="notice">수량 + 1주 단가 또는 수량 + 총금액만 입력해도 자동 계산돼. 총금액을 입력하면 총금액 기준으로 1주 단가를 다시 계산해.</div>
+      <div class="notice">보유종목은 holdings를 기준으로 표시하고, 거래기록 저장/삭제/수정 시 holdings는 해당 종목만 직접 반영해. 전체 덮어쓰기는 하지 않아.</div>
+      <div class="edit-mode-box" id="txEditModeBox" style="display:none;">
+        현재 거래기록 수정 모드야. 수정 저장하면 기존 거래 반영을 되돌린 뒤 새 내용으로 다시 적용해.
+      </div>
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>거래기록</h2>
+        <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
+      </div>
+      <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
+        <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
+      </div>
+      <div class="table-wrap">
+        <table class="transactions-table">
+          <thead>
+            <tr>
+              <th>거래일</th>
+              <th>계좌</th>
+              <th>종목명</th>
+              <th>티커</th>
+              <th>구분</th>
+              <th class="num">수량</th>
+              <th class="num">1주 단가</th>
+              <th class="num">총금액</th>
+              <th>메모</th>
+              <th>수정</th>
+              <th>삭제</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
@@ -423,9 +464,6 @@
           <div class="symbol-chart-status" id="chartStatusText">
             보유종목 선택 또는 티커 입력 후 차트를 불러와줘.
           </div>
-          <div class="inline-note">
-            차트는 Worker의 히스토리 응답을 사용해 직접 그려. 한국 티커는 .KS/.KQ 포함 입력도 가능해.
-          </div>
         </div>
 
         <div class="symbol-chart-view">
@@ -439,35 +477,6 @@
             <div class="item"><div class="title">최고 / 최저</div><div class="value" id="chartHighLow">-</div></div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="section-head">
-        <h2>거래기록</h2>
-        <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
-      </div>
-      <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
-        <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
-      </div>
-      <div class="table-wrap">
-        <table class="transactions-table">
-          <thead>
-            <tr>
-              <th>거래일</th>
-              <th>계좌</th>
-              <th>종목명</th>
-              <th>티커</th>
-              <th>구분</th>
-              <th class="num">수량</th>
-              <th class="num">1주 단가</th>
-              <th class="num">총금액</th>
-              <th>메모</th>
-              <th>삭제</th>
-            </tr>
-          </thead>
-          <tbody id="transactionsBody"></tbody>
-        </table>
       </div>
     </div>
 
@@ -508,18 +517,26 @@
         <h2>월별 투자 기록</h2>
         <div class="grid-3">
           <div><label for="investMonth">월</label><input id="investMonth" type="month" /></div>
-          <div><label for="investAmount">투자금</label><input id="investAmount" type="number" step="any" placeholder="예: 500000" /></div>
-          <div><label>&nbsp;</label><button onclick="addMonthlyInvestment()">기록 추가</button></div>
+          <div><label for="investAmount">수동 추가 매수금액</label><input id="investAmount" type="number" step="1" placeholder="예: 500000" /></div>
+          <div><label>&nbsp;</label><button onclick="addMonthlyInvestment()">수동 기록 추가</button></div>
         </div>
-        <div class="notice">거래기록 <strong>매수</strong> 추가/삭제 시에도 해당 월 투자금이 자동 반영돼. 매도는 월 투자금에 더하지 않아.</div>
+        <div class="notice">매수금액 / 매도금액 / 순투자금은 거래기록 기준으로 자동 집계되고, 수동 추가 금액은 해당 월 매수금액에 더해져.</div>
         <div class="table-wrap" style="margin-top:12px;">
           <table style="min-width:100%;">
-            <thead><tr><th>월</th><th class="num">투자금</th><th>삭제</th></tr></thead>
+            <thead>
+              <tr>
+                <th>월</th>
+                <th class="num">매수금액</th>
+                <th class="num">매도금액</th>
+                <th class="num">순투자금</th>
+                <th>수동추가 삭제</th>
+              </tr>
+            </thead>
             <tbody id="monthlyBody"></tbody>
           </table>
         </div>
       </div>
-      <div class="card"><h2>월별 투자금 그래프</h2><canvas id="monthlyChart"></canvas></div>
+      <div class="card"><h2>월별 순투자금 그래프</h2><canvas id="monthlyChart"></canvas></div>
     </div>
 
     <div class="card">
@@ -543,6 +560,7 @@
     let holdings = [];
     let transactions = [];
     let monthlyInvestments = [];
+    let monthlySummaryRows = [];
     let accountTargets = {
       "ISA": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 },
       "연금저축": { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 }
@@ -553,6 +571,8 @@
     let pensionAssetChart = null;
     let monthlyChart = null;
     let symbolHistoryChart = null;
+    let editingTransactionId = null;
+    let lastAmountEdited = "unit";
 
     let expandedAccounts = { "ISA": false, "연금저축": false, "금현물계좌": false };
     let holdingsSortState = {
@@ -593,6 +613,10 @@
         .replace(/"/g, "&quot;");
     }
 
+    function monthKeyFromDate(dateStr = "") {
+      return String(dateStr).slice(0, 7);
+    }
+
     function setLastUpdateText() {
       document.getElementById("lastUpdateText").textContent = "마지막 업데이트: " + new Date().toLocaleString("ko-KR");
     }
@@ -604,21 +628,17 @@
       if (el && !el.value) el.value = today;
     }
 
+    function ensureAccountTargets() {
+      if (!accountTargets["ISA"]) accountTargets["ISA"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
+      if (!accountTargets["연금저축"]) accountTargets["연금저축"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
+    }
+
     function normalizeText(value = "") {
       return String(value).replace(/\s+/g, "").toLowerCase();
     }
 
     function hasAny(text, keywords) {
       return keywords.some(keyword => text.includes(keyword));
-    }
-
-    function monthKeyFromDate(dateStr = "") {
-      return String(dateStr).slice(0, 7);
-    }
-
-    function ensureAccountTargets() {
-      if (!accountTargets["ISA"]) accountTargets["ISA"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
-      if (!accountTargets["연금저축"]) accountTargets["연금저축"] = { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
     }
 
     function classifyAsset(name = "", ticker = "", account = "") {
@@ -725,11 +745,40 @@
       await seedDefaultAccountTargetsIfEmpty();
       await Promise.all([loadMonthlyInvestmentsFromSupabase(), loadAccountTargetsFromSupabase()]);
       applySavedTargetsToInputs();
+      buildMonthlySummaryRows();
       updateTransactionNameSuggestions();
       syncChartHoldingOptions();
       setDefaultTransactionDate();
       setLastUpdateText();
       render();
+    }
+
+    function buildMonthlySummaryRows() {
+      const monthlyMap = new Map();
+
+      transactions.forEach(tx => {
+        const month = monthKeyFromDate(tx.trade_date);
+        if (!monthlyMap.has(month)) monthlyMap.set(month, { month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [] });
+        const row = monthlyMap.get(month);
+        if ((tx.trade_type || "매수") === "매수") row.buyAmount += intWon(tx.total_amount);
+        else row.sellAmount += intWon(tx.total_amount);
+      });
+
+      monthlyInvestments.forEach(item => {
+        if (!monthlyMap.has(item.month)) monthlyMap.set(item.month, { month: item.month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [] });
+        const row = monthlyMap.get(item.month);
+        row.manualAmount += intWon(item.amount);
+        row.manualIds.push(item.id);
+      });
+
+      monthlySummaryRows = [...monthlyMap.values()]
+        .map(row => ({
+          ...row,
+          buyAmount: intWon(row.buyAmount + row.manualAmount),
+          sellAmount: intWon(row.sellAmount),
+          netAmount: intWon((row.buyAmount + row.manualAmount) - row.sellAmount)
+        }))
+        .sort((a, b) => a.month.localeCompare(b.month));
     }
 
     function findHoldingByAccountAndName(account, name) {
@@ -806,6 +855,53 @@
       if (!name) return;
       const matched = findHoldingByAccountAndName(account, name);
       if (matched) tickerInput.value = matched.ticker || "";
+    }
+
+    function syncTransactionAmountFields(source) {
+      const qty = intQty(document.getElementById("txQty").value);
+      const unitInput = document.getElementById("txUnitPrice");
+      const totalInput = document.getElementById("txTotalAmount");
+      const unit = intWon(unitInput.value);
+      const total = intWon(totalInput.value);
+
+      if (qty <= 0) return;
+
+      if (source === "unit") {
+        lastAmountEdited = "unit";
+        if (unit > 0) totalInput.value = intWon(qty * unit);
+      } else if (source === "total") {
+        lastAmountEdited = "total";
+        if (total > 0) unitInput.value = Math.round(total / qty);
+      } else if (source === "qty") {
+        if (lastAmountEdited === "total" && total > 0) unitInput.value = Math.round(total / qty);
+        else if (unit > 0) totalInput.value = intWon(qty * unit);
+      }
+    }
+
+    function resolveTransactionAmounts() {
+      const qty = intQty(document.getElementById("txQty").value);
+      const unitInput = intWon(document.getElementById("txUnitPrice").value);
+      const totalInput = intWon(document.getElementById("txTotalAmount").value);
+
+      if (qty <= 0) return { qty: 0, unit_price: 0, total_amount: 0 };
+
+      if (totalInput > 0) {
+        return {
+          qty,
+          total_amount: intWon(totalInput),
+          unit_price: Math.round(totalInput / qty)
+        };
+      }
+
+      if (unitInput > 0) {
+        return {
+          qty,
+          unit_price: intWon(unitInput),
+          total_amount: intWon(qty * unitInput)
+        };
+      }
+
+      return { qty, unit_price: 0, total_amount: 0 };
     }
 
     async function upsertHoldingFromBuyTransaction(tx) {
@@ -1089,27 +1185,32 @@
       await addOrUpdateMonthlyInvestment(month, amount);
     }
 
-    async function addTransaction() {
+    function buildTransactionPayloadFromForm() {
       const trade_date = document.getElementById("txDate").value;
       const account = document.getElementById("txAccount").value;
       const trade_type = document.getElementById("txTradeType").value;
       const name = document.getElementById("txName").value.trim();
       let ticker = document.getElementById("txTicker").value.trim();
-      const quantity = intQty(document.getElementById("txQty").value);
-      const unit_price = intWon(document.getElementById("txUnitPrice").value);
       const memo = document.getElementById("txMemo").value.trim();
 
-      if (!trade_date) return alert("거래일을 입력해줘.");
-      if (!name) return alert("종목명을 입력해줘.");
-      if (quantity <= 0) return alert("수량을 0보다 크게 입력해줘.");
-      if (unit_price <= 0) return alert("1주 단가를 0보다 크게 입력해줘.");
+      const { qty: quantity, unit_price, total_amount } = resolveTransactionAmounts();
+
+      if (!trade_date) throw new Error("거래일을 입력해줘.");
+      if (!name) throw new Error("종목명을 입력해줘.");
+      if (quantity <= 0) throw new Error("수량을 0보다 크게 입력해줘.");
+      if (unit_price <= 0 && total_amount <= 0) throw new Error("1주 단가 또는 총금액 중 하나는 입력해줘.");
 
       const matchedHolding = findHoldingByAccountAndName(account, name);
       if (!ticker && matchedHolding) ticker = matchedHolding.ticker || "";
-      if (!ticker && trade_type === "매수") return alert("신규 종목 매수라면 티커를 입력해줘. 기존 보유종목이면 비워도 돼.");
-      if (!ticker && trade_type === "매도") return alert("매도는 기존 보유종목 기준이라 티커를 자동으로 찾지 못하면 직접 입력해야 해.");
 
-      const tx = {
+      if (!ticker && trade_type === "매수") {
+        throw new Error("신규 종목 매수라면 티커를 입력해줘. 기존 보유종목이면 비워도 돼.");
+      }
+      if (!ticker && trade_type === "매도") {
+        throw new Error("매도는 기존 보유종목 기준이라 티커를 자동으로 찾지 못하면 직접 입력해야 해.");
+      }
+
+      return {
         trade_date,
         account,
         name,
@@ -1117,9 +1218,37 @@
         trade_type,
         quantity: intQty(quantity),
         unit_price: intWon(unit_price),
-        total_amount: intWon(quantity * unit_price),
+        total_amount: intWon(total_amount),
         memo
       };
+    }
+
+    function resetTransactionForm() {
+      ["txName","txTicker","txQty","txUnitPrice","txTotalAmount","txMemo"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("txTradeType").value = "매수";
+      editingTransactionId = null;
+      document.getElementById("txSaveBtn").textContent = "거래기록 저장";
+      document.getElementById("txCancelEditBtn").style.display = "none";
+      document.getElementById("txEditModeBox").style.display = "none";
+      setDefaultTransactionDate();
+      updateTransactionNameSuggestions();
+    }
+
+    async function saveTransaction() {
+      if (editingTransactionId) {
+        await updateTransaction();
+      } else {
+        await addTransaction();
+      }
+    }
+
+    async function addTransaction() {
+      let tx;
+      try {
+        tx = buildTransactionPayloadFromForm();
+      } catch (err) {
+        return alert(err.message);
+      }
 
       const { data, error } = await db.from("transactions").insert([tx]).select();
       if (error) return alert("거래기록 저장 실패: " + error.message);
@@ -1132,29 +1261,108 @@
           total_amount: intWon(data[0].total_amount ?? 0)
         };
 
-        transactions.unshift(inserted);
-
         let synced = false;
-        if (trade_type === "매수") synced = await upsertHoldingFromBuyTransaction(inserted);
-        if (trade_type === "매도") synced = await applySellToHolding(inserted);
+        if (tx.trade_type === "매수") synced = await upsertHoldingFromBuyTransaction(inserted);
+        if (tx.trade_type === "매도") synced = await applySellToHolding(inserted);
 
         if (!synced) {
           await db.from("transactions").delete().eq("id", inserted.id);
-          transactions = transactions.filter(t => t.id !== inserted.id);
           return;
         }
 
         await syncMonthlyInvestmentFromTransaction(inserted, 1);
       }
 
-      ["txName","txTicker","txQty","txUnitPrice","txMemo"].forEach(id => document.getElementById(id).value = "");
-      document.getElementById("txTradeType").value = "매수";
+      resetTransactionForm();
       await reloadAllData();
-      return;
+    }
+
+    function startTransactionEdit(id) {
+      const tx = transactions.find(t => t.id === id);
+      if (!tx) return;
+
+      editingTransactionId = id;
+      document.getElementById("txDate").value = tx.trade_date || "";
+      document.getElementById("txAccount").value = tx.account || "ISA";
+      document.getElementById("txTradeType").value = tx.trade_type || "매수";
+      document.getElementById("txName").value = tx.name || "";
+      document.getElementById("txTicker").value = tx.ticker || "";
+      document.getElementById("txQty").value = intQty(tx.quantity);
+      document.getElementById("txUnitPrice").value = intWon(tx.unit_price);
+      document.getElementById("txTotalAmount").value = intWon(tx.total_amount);
+      document.getElementById("txMemo").value = tx.memo || "";
+
+      document.getElementById("txSaveBtn").textContent = "거래기록 수정 저장";
+      document.getElementById("txCancelEditBtn").style.display = "inline-block";
+      document.getElementById("txEditModeBox").style.display = "block";
+
+      updateTransactionNameSuggestions();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function cancelTransactionEdit() {
+      resetTransactionForm();
+    }
+
+    async function updateTransaction() {
+      const oldTx = transactions.find(t => t.id === editingTransactionId);
+      if (!oldTx) return alert("수정할 거래기록을 찾지 못했어.");
+
+      let newTx;
+      try {
+        newTx = buildTransactionPayloadFromForm();
+      } catch (err) {
+        return alert(err.message);
+      }
+
+      // 1) 기존 반영 되돌리기
+      let rollbackOldOk = false;
+      if ((oldTx.trade_type || "매수") === "매수") rollbackOldOk = await rollbackBuyFromHolding(oldTx);
+      else rollbackOldOk = await rollbackSellFromHolding(oldTx);
+      if (!rollbackOldOk) return;
+
+      await syncMonthlyInvestmentFromTransaction(oldTx, -1);
+
+      // 2) 새 내용 반영 시도
+      let applyNewOk = false;
+      if (newTx.trade_type === "매수") applyNewOk = await upsertHoldingFromBuyTransaction(newTx);
+      else applyNewOk = await applySellToHolding(newTx);
+
+      if (!applyNewOk) {
+        // 실패하면 원상복구
+        let restoreOldOk = false;
+        if ((oldTx.trade_type || "매수") === "매수") restoreOldOk = await upsertHoldingFromBuyTransaction(oldTx);
+        else restoreOldOk = await applySellToHolding(oldTx);
+
+        if (restoreOldOk) await syncMonthlyInvestmentFromTransaction(oldTx, 1);
+        await reloadAllData();
+        return;
+      }
+
+      await syncMonthlyInvestmentFromTransaction(newTx, 1);
+
+      // 3) transactions 테이블 실제 수정
+      const { error } = await db.from("transactions").update(newTx).eq("id", editingTransactionId);
+      if (error) {
+        // DB 수정 실패 시 새 반영 취소 후 old 복원
+        if (newTx.trade_type === "매수") await rollbackBuyFromHolding(newTx);
+        else await rollbackSellFromHolding(newTx);
+        await syncMonthlyInvestmentFromTransaction(newTx, -1);
+
+        if ((oldTx.trade_type || "매수") === "매수") await upsertHoldingFromBuyTransaction(oldTx);
+        else await applySellToHolding(oldTx);
+        await syncMonthlyInvestmentFromTransaction(oldTx, 1);
+
+        await reloadAllData();
+        return alert("거래기록 수정 실패: " + error.message);
+      }
+
+      resetTransactionForm();
+      await reloadAllData();
     }
 
     async function deleteHolding() {
-      alert("이제 보유종목은 거래기록 기준으로 관리하는 구조라서, 보유종목 직접 삭제 대신 해당 거래기록을 삭제해줘.");
+      alert("보유종목 직접 삭제 대신 해당 거래기록을 삭제해줘.");
     }
 
     async function deleteTransaction(id) {
@@ -1164,16 +1372,16 @@
 
       const { error } = await db.from("transactions").delete().eq("id", id);
       if (error) return alert("거래기록 삭제 실패: " + error.message);
-      transactions = transactions.filter(t => t.id !== id);
 
       let synced = false;
       if ((tx.trade_type || "매수") === "매수") synced = await rollbackBuyFromHolding(tx);
-      if ((tx.trade_type || "매수") === "매도") synced = await rollbackSellFromHolding(tx);
+      else synced = await rollbackSellFromHolding(tx);
       if (!synced) return;
 
       await syncMonthlyInvestmentFromTransaction(tx, -1);
+
+      if (editingTransactionId === id) resetTransactionForm();
       await reloadAllData();
-      return;
     }
 
     async function updateField(id, field, value) {
@@ -1530,7 +1738,7 @@
       const meta = document.getElementById("transactionsMeta");
 
       if (!transactions.length) {
-        body.innerHTML = `<tr><td colspan="10" class="empty-text">거래기록이 없어.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="11" class="empty-text">거래기록이 없어.</td></tr>`;
         meta.textContent = "거래기록 0건";
         btn.textContent = "전체보기";
         return;
@@ -1551,6 +1759,7 @@
           <td class="num">${won(t.unit_price)}</td>
           <td class="num">${won(t.total_amount)}</td>
           <td>${esc(t.memo || "")}</td>
+          <td><button class="warning" onclick="startTransactionEdit(${t.id})">수정</button></td>
           <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
         </tr>`).join("");
     }
@@ -1687,11 +1896,12 @@
     async function addMonthlyInvestment() {
       const month = document.getElementById("investMonth").value;
       const amount = intWon(document.getElementById("investAmount").value);
-      if (!month || !amount) return alert("월과 투자금을 입력해줘.");
+      if (!month || !amount) return alert("월과 수동 추가 금액을 입력해줘.");
       try {
         await addOrUpdateMonthlyInvestment(month, amount);
         document.getElementById("investMonth").value = "";
         document.getElementById("investAmount").value = "";
+        buildMonthlySummaryRows();
         renderMonthlyTable();
         renderMonthlyChart();
       } catch (err) {
@@ -1701,30 +1911,37 @@
 
     async function deleteMonthlyInvestment(id) {
       const { error } = await db.from("monthly_investments").delete().eq("id", id);
-      if (error) return alert("월별 투자기록 삭제 실패: " + error.message);
+      if (error) return alert("월별 수동기록 삭제 실패: " + error.message);
       await loadMonthlyInvestmentsFromSupabase();
+      buildMonthlySummaryRows();
       renderMonthlyTable();
       renderMonthlyChart();
     }
 
     function renderMonthlyTable() {
       const body = document.getElementById("monthlyBody");
-      body.innerHTML = monthlyInvestments.map(item => `
+      body.innerHTML = monthlySummaryRows.map(row => `
         <tr>
-          <td>${esc(item.month)}</td>
-          <td class="num">${won(item.amount)}</td>
-          <td><button class="danger" onclick="deleteMonthlyInvestment(${item.id})">삭제</button></td>
-        </tr>`).join("") || `<tr><td colspan="3" class="empty-text">월별 투자기록이 없어.</td></tr>`;
+          <td>${esc(row.month)}</td>
+          <td class="num">${won(row.buyAmount)}</td>
+          <td class="num">${won(row.sellAmount)}</td>
+          <td class="num ${row.netAmount >= 0 ? "profit" : "loss"}">${won(row.netAmount)}</td>
+          <td>${
+            row.manualIds.length
+              ? row.manualIds.map(id => `<button class="danger" style="margin:2px;" onclick="deleteMonthlyInvestment(${id})">삭제</button>`).join("")
+              : '<span class="muted">없음</span>'
+          }</td>
+        </tr>`).join("") || `<tr><td colspan="5" class="empty-text">월별 투자기록이 없어.</td></tr>`;
     }
 
     function renderMonthlyChart() {
       const ctx = document.getElementById("monthlyChart");
-      const labels = monthlyInvestments.map(i => i.month);
-      const data = monthlyInvestments.map(i => intWon(i.amount));
+      const labels = monthlySummaryRows.map(i => i.month);
+      const data = monthlySummaryRows.map(i => i.netAmount);
       if (monthlyChart) monthlyChart.destroy();
       monthlyChart = new Chart(ctx, {
         type: "line",
-        data: { labels, datasets: [{ label: "월별 투자금", data }] },
+        data: { labels, datasets: [{ label: "월별 순투자금", data }] },
         options: { responsive: true, plugins: { legend: { display: true } } }
       });
     }
@@ -1891,8 +2108,8 @@
     function render() {
       renderSummary();
       renderAccountSummary();
-      renderHoldingsSections();
       renderTransactions();
+      renderHoldingsSections();
       renderAccountCharts();
       renderRebalanceTitles();
       renderAllRebalances();
@@ -1910,6 +2127,9 @@
     });
 
     document.getElementById("txName").addEventListener("input", autofillTransactionTickerFromName);
+    document.getElementById("txQty").addEventListener("input", () => syncTransactionAmountFields("qty"));
+    document.getElementById("txUnitPrice").addEventListener("input", () => syncTransactionAmountFields("unit"));
+    document.getElementById("txTotalAmount").addEventListener("input", () => syncTransactionAmountFields("total"));
 
     document.getElementById("chartHoldingSelect").addEventListener("change", (e) => {
       const raw = e.target.value;
