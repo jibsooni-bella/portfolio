@@ -117,11 +117,9 @@
 
     .empty-text { color: #667085; font-size: 14px; padding: 8px 4px 0; }
     .muted { font-size: 12px; color: #667085; }
-    .chart-box { width: 100%; max-width: 260px; height: 260px; margin: 0 auto; position: relative; }
-    .chart-donut-note { font-size: 12px; color: #667085; text-align: center; margin: 6px 0 8px; }
-    .chart-donut-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; margin-top: 4px; }
-    .chart-donut-legend .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #475467; }
-    .chart-donut-legend .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    .chart-box { width: 100%; max-width: 200px; height: 200px; margin: 0 auto; position: relative; }
+    .dual-chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+    .dual-chart-label { font-size: 13px; font-weight: 700; color: #667085; text-align: center; margin-bottom: 6px; }
     .section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .section-head h2 { margin: 0; }
     .section-meta { font-size: 13px; color: #667085; }
@@ -487,9 +485,16 @@
     <div class="grid-2">
       <div class="card">
         <div class="account-panel-title">ISA 자산 비중</div>
-        <div class="chart-box"><canvas id="isaAssetChart"></canvas></div>
-        <div class="chart-donut-note">바깥 링 = 종목별 / 안쪽 링 = 자산군별</div>
-        <div class="chart-donut-legend" id="isaDonutLegend"></div>
+        <div class="dual-chart-wrap">
+          <div>
+            <div class="dual-chart-label">자산군별</div>
+            <div class="chart-box"><canvas id="isaAssetChart"></canvas></div>
+          </div>
+          <div>
+            <div class="dual-chart-label">주식 종목별</div>
+            <div class="chart-box"><canvas id="isaStockChart"></canvas></div>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="account-panel-title" id="isaRebalanceTitle">ISA 리밸런싱 : 총금액 0원</div>
@@ -508,9 +513,16 @@
     <div class="grid-2">
       <div class="card">
         <div class="account-panel-title">연금저축 자산 비중</div>
-        <div class="chart-box"><canvas id="pensionAssetChart"></canvas></div>
-        <div class="chart-donut-note">바깥 링 = 종목별 / 안쪽 링 = 자산군별</div>
-        <div class="chart-donut-legend" id="pensionDonutLegend"></div>
+        <div class="dual-chart-wrap">
+          <div>
+            <div class="dual-chart-label">자산군별</div>
+            <div class="chart-box"><canvas id="pensionAssetChart"></canvas></div>
+          </div>
+          <div>
+            <div class="dual-chart-label">주식 종목별</div>
+            <div class="chart-box"><canvas id="pensionStockChart"></canvas></div>
+          </div>
+        </div>
       </div>
       <div class="card">
         <div class="account-panel-title" id="pensionRebalanceTitle">연금저축 리밸런싱 : 총금액 0원</div>
@@ -583,6 +595,8 @@
     let showAllTransactions = false;
     let isaAssetChart = null;
     let pensionAssetChart = null;
+    let isaStockChart = null;
+    let pensionStockChart = null;
     let monthlyChart = null;
     let symbolHistoryChart = null;
     let editingTransactionId = null;
@@ -1836,111 +1850,40 @@
       return totals;
     }
 
-    // 자산군별 색상 고정
+    // 자산군별 고정 색상
     const ASSET_COLORS = { "주식": "#378add", "채권": "#5dcaa5", "금": "#d4537e", "달러": "#ef9f27", "리츠": "#a78bfa" };
-    // 종목별 색상: 같은 자산군 안에서 밝기를 다르게
-    const TICKER_COLOR_POOLS = {
-      "주식": ["#185fa5","#378add","#85b7eb","#b5d4f4","#0c447c","#5ba3e8","#2471c8"],
-      "채권": ["#0f6e56","#1d9e75","#5dcaa5","#9fe1cb","#085041","#3db88a","#27876a"],
-      "금":   ["#993556","#d4537e","#ed93b1","#f4c0d1","#72243e","#e06a95","#bb4470"],
-      "달러": ["#854f0b","#ba7517","#ef9f27","#fac775","#633806","#d48820","#a86812"],
-      "리츠":  ["#6d28d9","#a78bfa","#c4b5fd","#7c3aed","#5b21b6","#8b5cf6","#ddd6fe"]
-    };
 
-    function getTickerColors(items) {
-      const usedIndexes = {};
-      return items.map(h => {
-        const pool = TICKER_COLOR_POOLS[h.assetType] || TICKER_COLOR_POOLS["주식"];
-        const idx = usedIndexes[h.assetType] || 0;
-        usedIndexes[h.assetType] = idx + 1;
-        return pool[idx % pool.length];
-      });
-    }
-
-    // ✅ 도넛 차트: 바깥 링 = 종목별, 안쪽 링 = 자산군별
-    // 이미 차트가 있으면 데이터만 교체해서 빠르게 업데이트
-    function updateDonutChart(canvasId, legendId, currentChart, items) {
+    // 파이차트 업데이트 (이미 있으면 데이터만 교체)
+    function updatePieChart(canvasId, currentChart, labels, data, colors) {
       const ctx = document.getElementById(canvasId);
-      const legendEl = document.getElementById(legendId);
-
-      // 종목별 (바깥 링)
-      const tickerItems = items.filter(h => intWon(intQty(h.qty) * intWon(h.price)) > 0);
-      const tickerLabels = tickerItems.map(h => h.name);
-      const tickerData = tickerItems.map(h => intWon(intQty(h.qty) * intWon(h.price)));
-      const tickerColors = getTickerColors(tickerItems);
-
-      // 자산군별 (안쪽 링)
-      const totals = buildAssetTotals(items);
-      const assetLabels = Object.keys(totals).filter(k => totals[k] > 0);
-      const assetData = assetLabels.map(k => totals[k]);
-      const assetColors = assetLabels.map(k => ASSET_COLORS[k] || "#888");
-
-      // 범례 HTML 생성 (종목별)
-      if (legendEl) {
-        legendEl.innerHTML = tickerItems.map((h, i) => `
-          <span class="legend-item">
-            <span class="legend-dot" style="background:${tickerColors[i]}"></span>
-            ${esc(h.name)}
-          </span>`).join("");
-      }
-
-      if (!tickerItems.length) {
-        if (currentChart) { currentChart.destroy(); return null; }
-        return null;
-      }
+      if (!ctx) return currentChart;
 
       if (currentChart) {
-        // 이미 차트가 있으면 데이터만 교체
-        currentChart.data.labels = tickerLabels;
-        currentChart.data.datasets[0].data = tickerData;
-        currentChart.data.datasets[0].backgroundColor = tickerColors;
-        currentChart.data.datasets[1].data = assetData;
-        currentChart.data.datasets[1].backgroundColor = assetColors;
-        currentChart.data.datasets[1].labels = assetLabels;
+        currentChart.data.labels = labels.length ? labels : ["없음"];
+        currentChart.data.datasets[0].data = labels.length ? data : [1];
+        currentChart.data.datasets[0].backgroundColor = labels.length ? colors : ["#e0e0e0"];
         currentChart.update();
         return currentChart;
       }
 
-      // 처음 한 번만 생성
       return new Chart(ctx, {
-        type: "doughnut",
+        type: "pie",
         data: {
-          labels: tickerLabels,
-          datasets: [
-            {
-              label: "종목별",
-              data: tickerData,
-              backgroundColor: tickerColors,
-              borderWidth: 2,
-              borderColor: "#fff"
-            },
-            {
-              label: "자산군별",
-              data: assetData,
-              backgroundColor: assetColors,
-              borderWidth: 2,
-              borderColor: "#fff",
-              labels: assetLabels
-            }
-          ]
+          labels: labels.length ? labels : ["없음"],
+          datasets: [{ data: labels.length ? data : [1], backgroundColor: labels.length ? colors : ["#e0e0e0"], borderWidth: 2, borderColor: "#fff" }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          cutout: "38%",
           layout: { padding: 6 },
           plugins: {
-            legend: { display: false },
+            legend: { position: "bottom", labels: { font: { size: 11 }, boxWidth: 12, padding: 8 } },
             tooltip: {
               callbacks: {
-                label: function(context) {
-                  const dsIndex = context.datasetIndex;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                  const label = dsIndex === 1
-                    ? (context.dataset.labels?.[context.dataIndex] || context.label)
-                    : context.label;
-                  return `${label}: ${won(context.parsed)} (${pct}%)`;
+                label: ctx => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                  return `${ctx.label}: ${won(ctx.parsed)} (${pct}%)`;
                 }
               }
             }
@@ -1950,8 +1893,34 @@
     }
 
     function renderAccountCharts() {
-      isaAssetChart = updateDonutChart("isaAssetChart", "isaDonutLegend", isaAssetChart, holdings.filter(h => h.account === "ISA"));
-      pensionAssetChart = updateDonutChart("pensionAssetChart", "pensionDonutLegend", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
+      // ISA 자산군별
+      const isaItems = holdings.filter(h => h.account === "ISA");
+      const isaTotals = buildAssetTotals(isaItems);
+      const isaAssetLabels = Object.keys(isaTotals).filter(k => isaTotals[k] > 0);
+      const isaAssetData = isaAssetLabels.map(k => isaTotals[k]);
+      const isaAssetColors = isaAssetLabels.map(k => ASSET_COLORS[k] || "#888");
+      isaAssetChart = updatePieChart("isaAssetChart", isaAssetChart, isaAssetLabels, isaAssetData, isaAssetColors);
+
+      // ISA 주식 종목별
+      const isaStockItems = isaItems.filter(h => h.assetType === "주식");
+      const isaStockLabels = isaStockItems.map(h => h.name);
+      const isaStockData = isaStockItems.map(h => intWon(intQty(h.qty) * intWon(h.price)));
+      const isaStockColors = ["#185fa5","#5dcaa5","#85b7eb","#ef9f27","#d4537e","#a78bfa","#0c447c","#3db88a","#fac775","#ed93b1"];
+      isaStockChart = updatePieChart("isaStockChart", isaStockChart, isaStockLabels, isaStockData, isaStockColors.slice(0, isaStockLabels.length));
+
+      // 연금저축 자산군별
+      const pensionItems = holdings.filter(h => h.account === "연금저축");
+      const pensionTotals = buildAssetTotals(pensionItems);
+      const pensionAssetLabels = Object.keys(pensionTotals).filter(k => pensionTotals[k] > 0);
+      const pensionAssetData = pensionAssetLabels.map(k => pensionTotals[k]);
+      const pensionAssetColors = pensionAssetLabels.map(k => ASSET_COLORS[k] || "#888");
+      pensionAssetChart = updatePieChart("pensionAssetChart", pensionAssetChart, pensionAssetLabels, pensionAssetData, pensionAssetColors);
+
+      // 연금저축 주식 종목별
+      const pensionStockItems = pensionItems.filter(h => h.assetType === "주식");
+      const pensionStockLabels = pensionStockItems.map(h => h.name);
+      const pensionStockData = pensionStockItems.map(h => intWon(intQty(h.qty) * intWon(h.price)));
+      pensionStockChart = updatePieChart("pensionStockChart", pensionStockChart, pensionStockLabels, pensionStockData, isaStockColors.slice(0, pensionStockLabels.length));
     }
 
     function renderRebalanceTitles() {
