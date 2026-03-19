@@ -587,8 +587,12 @@
         <div class="item"><div class="title">오늘 수익률</div><div class="value" id="snapRate">-</div></div>
         <div class="item"><div class="title">스냅샷 기록 수</div><div class="value" id="snapCount">-</div></div>
       </div>
+      <div class="btn-row" style="margin-bottom:12px;">
+        <button class="secondary" onclick="manualSaveSnapshot()" id="manualSnapshotBtn">📸 오늘 평가금 지금 저장</button>
+        <div class="section-meta" id="snapshotSaveStatus" style="line-height:2.2;"></div>
+      </div>
       <canvas id="snapshotChart"></canvas>
-      <div class="notice">앱을 열 때마다 오늘 날짜로 평가금을 자동 저장해. 매일 한 번씩 기록이 쌓이면서 수익률 변화를 볼 수 있어.</div>
+      <div class="notice">오후 3시 20분(장 마감) 이후에 앱을 열면 자동으로 저장돼. 그 전에 열었다면 장 마감 후 직접 버튼을 눌러 저장할 수 있어. 하루 한 번 기록이 쌓이면서 수익률 변화를 볼 수 있어.</div>
     </div>
 
     <div class="card">
@@ -2276,10 +2280,26 @@
 
     async function saveSnapshotIfNeeded() {
       if (!holdings.length) return;
+
+      // ✅ 오후 3시 20분(15:20) 이후에만 자동저장
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const isAfterMarketClose = hour > 15 || (hour === 15 && minute >= 20);
+      if (!isAfterMarketClose) {
+        document.getElementById("snapshotSaveStatus").textContent = "⏰ 장 마감(오후 3:20) 전이라 자동저장 안 됐어. 마감 후 버튼으로 직접 저장해줘!";
+        return;
+      }
+
+      await doSaveSnapshot();
+    }
+
+    async function doSaveSnapshot() {
+      if (!holdings.length) return;
+
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
-      // 오늘 이미 저장된 스냅샷이 있으면 업데이트, 없으면 새로 저장
       const totalBuy = holdings.reduce((s, h) => s + intWon(h.buy), 0);
       const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
@@ -2303,6 +2323,28 @@
         const { data, error } = await db.from("portfolio_snapshots").insert([payload]).select();
         if (error) { console.error("스냅샷 저장 실패:", error); return; }
         if (data?.length) snapshots.push({ ...data[0], ...payload });
+      }
+
+      return todayStr;
+    }
+
+    async function manualSaveSnapshot() {
+      if (!holdings.length) return alert("보유종목이 없어서 저장할 수 없어.");
+      const btn = document.getElementById("manualSnapshotBtn");
+      const status = document.getElementById("snapshotSaveStatus");
+      btn.disabled = true;
+      btn.textContent = "저장 중...";
+      status.textContent = "";
+
+      try {
+        const savedDate = await doSaveSnapshot();
+        status.textContent = `✅ ${savedDate} 평가금 저장 완료!`;
+        renderSnapshotChart();
+      } catch (e) {
+        status.textContent = "❌ 저장 실패: " + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📸 오늘 평가금 지금 저장";
       }
     }
 
