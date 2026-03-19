@@ -1261,12 +1261,16 @@
           total_amount: intWon(data[0].total_amount ?? 0)
         };
 
+        // ✅ 개선1: 로컬 transactions 배열에 바로 추가 (서버 재요청 없이)
+        transactions.unshift(inserted);
+
         let synced = false;
         if (tx.trade_type === "매수") synced = await upsertHoldingFromBuyTransaction(inserted);
         if (tx.trade_type === "매도") synced = await applySellToHolding(inserted);
 
         if (!synced) {
           await db.from("transactions").delete().eq("id", inserted.id);
+          transactions = transactions.filter(t => t.id !== inserted.id);
           return;
         }
 
@@ -1274,7 +1278,12 @@
       }
 
       resetTransactionForm();
-      await reloadAllData();
+      // ✅ 개선2: reloadAllData() 대신 로컬 상태만 갱신 후 렌더링
+      buildMonthlySummaryRows();
+      updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
+      setLastUpdateText();
+      render();
     }
 
     function startTransactionEdit(id) {
@@ -1357,8 +1366,24 @@
         return alert("거래기록 수정 실패: " + error.message);
       }
 
+      // ✅ 개선3: 로컬 transactions 배열도 바로 업데이트
+      const idx = transactions.findIndex(t => t.id === editingTransactionId);
+      if (idx >= 0) {
+        transactions[idx] = {
+          ...transactions[idx],
+          ...newTx,
+          quantity: intQty(newTx.quantity),
+          unit_price: intWon(newTx.unit_price),
+          total_amount: intWon(newTx.total_amount)
+        };
+      }
+
       resetTransactionForm();
-      await reloadAllData();
+      buildMonthlySummaryRows();
+      updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
+      setLastUpdateText();
+      render();
     }
 
     async function deleteHolding() {
@@ -1373,6 +1398,9 @@
       const { error } = await db.from("transactions").delete().eq("id", id);
       if (error) return alert("거래기록 삭제 실패: " + error.message);
 
+      // ✅ 개선4: 로컬 배열에서도 바로 삭제
+      transactions = transactions.filter(t => t.id !== id);
+
       let synced = false;
       if ((tx.trade_type || "매수") === "매수") synced = await rollbackBuyFromHolding(tx);
       else synced = await rollbackSellFromHolding(tx);
@@ -1381,7 +1409,13 @@
       await syncMonthlyInvestmentFromTransaction(tx, -1);
 
       if (editingTransactionId === id) resetTransactionForm();
-      await reloadAllData();
+
+      // ✅ 개선5: reloadAllData() 대신 로컬 상태만 갱신 후 렌더링
+      buildMonthlySummaryRows();
+      updateTransactionNameSuggestions();
+      syncChartHoldingOptions();
+      setLastUpdateText();
+      render();
     }
 
     async function updateField(id, field, value) {
@@ -1432,16 +1466,26 @@
       render();
     }
 
+    // ✅ 핵심 개선: 가격을 한 번에 동시에 가져오기 (병렬 처리)
+    // 기존: 종목 하나씩 순서대로 → 10종목이면 10번 기다림
+    // 개선: 모든 종목 동시에 요청 → 1번만 기다림
     async function updateAllPrices(showAlert = true) {
-      for (const h of holdings) {
-        if (!h.ticker || isManualGold(h)) continue;
-        const latest = await fetchPriceFromWorker(h.ticker);
-        if (latest) {
-          h.price = intWon(latest);
-          const { error } = await db.from("holdings").update({ price: intWon(latest) }).eq("id", h.id);
-          if (error) console.error(error);
-        }
-      }
+      await Promise.all(
+        holdings
+          .filter(h => h.ticker && !isManualGold(h))
+          .map(async (h) => {
+            try {
+              const latest = await fetchPriceFromWorker(h.ticker);
+              if (latest) {
+                h.price = intWon(latest);
+                const { error } = await db.from("holdings").update({ price: intWon(latest) }).eq("id", h.id);
+                if (error) console.error("가격 저장 실패:", h.ticker, error);
+              }
+            } catch (e) {
+              console.error("가격 조회 실패:", h.ticker, e);
+            }
+          })
+      );
       setLastUpdateText();
       render();
       if (showAlert) alert("ETF 가격 업데이트 완료!");
@@ -1778,21 +1822,31 @@
       return totals;
     }
 
-    function renderPieChartForItems(canvasId, currentChart, items) {
+    // ✅ 개선: 차트를 매번 새로 만들지 않고 데이터만 업데이트
+    // 기존: destroy() → 새로 생성 (매번 차트 전체를 날리고 다시 그림)
+    // 개선: 이미 있으면 데이터만 바꾸고 update() 호출
+    function updatePieChart(canvasId, currentChart, items) {
       const totals = buildAssetTotals(items);
       const labels = Object.keys(totals).filter(k => totals[k] > 0);
       const data = labels.map(k => totals[k]);
       const ctx = document.getElementById(canvasId);
 
-      if (currentChart) currentChart.destroy();
-
-      if (!labels.length) {
-        return new Chart(ctx, {
-          type: "pie",
-          data: { labels: ["없음"], datasets: [{ data: [1] }] },
-          options: { responsive: true, maintainAspectRatio: false, layout: { padding: 8 }, plugins: { legend: { position: "bottom" } } }
-        });
+      if (currentChart) {
+        // 차트가 이미 있으면 데이터만 교체
+        currentChart.data.labels = labels.length ? labels : ["없음"];
+        currentChart.data.datasets[0].data = labels.length ? data : [1];
+        currentChart.update();
+        return currentChart;
       }
+
+      // 처음 한 번만 새로 만들기
+      const emptyConfig = {
+        type: "pie",
+        data: { labels: ["없음"], datasets: [{ data: [1] }] },
+        options: { responsive: true, maintainAspectRatio: false, layout: { padding: 8 }, plugins: { legend: { position: "bottom" } } }
+      };
+
+      if (!labels.length) return new Chart(ctx, emptyConfig);
 
       return new Chart(ctx, {
         type: "pie",
@@ -1802,8 +1856,8 @@
     }
 
     function renderAccountCharts() {
-      isaAssetChart = renderPieChartForItems("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
-      pensionAssetChart = renderPieChartForItems("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
+      isaAssetChart = updatePieChart("isaAssetChart", isaAssetChart, holdings.filter(h => h.account === "ISA"));
+      pensionAssetChart = updatePieChart("pensionAssetChart", pensionAssetChart, holdings.filter(h => h.account === "연금저축"));
     }
 
     function renderRebalanceTitles() {
@@ -1934,11 +1988,21 @@
         </tr>`).join("") || `<tr><td colspan="5" class="empty-text">월별 투자기록이 없어.</td></tr>`;
     }
 
+    // ✅ 개선: 월별 차트도 매번 새로 만들지 않고 데이터만 업데이트
     function renderMonthlyChart() {
       const ctx = document.getElementById("monthlyChart");
       const labels = monthlySummaryRows.map(i => i.month);
       const data = monthlySummaryRows.map(i => i.netAmount);
-      if (monthlyChart) monthlyChart.destroy();
+
+      if (monthlyChart) {
+        // 차트가 이미 있으면 데이터만 교체
+        monthlyChart.data.labels = labels;
+        monthlyChart.data.datasets[0].data = data;
+        monthlyChart.update();
+        return;
+      }
+
+      // 처음 한 번만 새로 만들기
       monthlyChart = new Chart(ctx, {
         type: "line",
         data: { labels, datasets: [{ label: "월별 순투자금", data }] },
