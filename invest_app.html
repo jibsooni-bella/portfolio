@@ -349,6 +349,21 @@
       .symbol-chart-panel, .symbol-chart-view { padding: 12px; }
       .chart-canvas-wrap { height: 220px; }
       .section-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+      /* 배당 요약 — 2열 */
+      .dividend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+      /* 월별 투자기록 표 — 가로 스크롤 */
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+      /* 월별 그래프 — Y축 여백 확보 */
+      #monthlyChart { max-width: 100%; }
+
+      /* 거래기록 추가 폼 — grid-3도 2열로 */
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      /* 수익률 그래프 요약 — 2열 */
+      #snapValue, #snapBuy, #snapProfit, #snapRate, #snapCount { font-size: 15px; }
     }
   </style>
 </head>
@@ -579,7 +594,7 @@
         </div>
         <div class="notice">매수금액 / 매도금액 / 순투자금은 거래기록 기준으로 자동 집계되고, 수동 추가 금액은 해당 월 매수금액에 더해져.</div>
         <div class="table-wrap" style="margin-top:12px;">
-          <table style="min-width:100%;">
+          <table style="min-width:520px;">
             <thead>
               <tr>
                 <th>월</th>
@@ -598,7 +613,7 @@
 
     <div class="card">
       <h2>배당 요약</h2>
-      <div class="grid-4">
+      <div class="grid-4 dividend-grid">
         <div class="item"><div class="title">올해 예상 배당금</div><div class="value" id="dividendYear">0원</div></div>
         <div class="item"><div class="title">월 환산 예상금</div><div class="value" id="dividendMonth">0원</div></div>
         <div class="item"><div class="title">배당 입력 종목 수</div><div class="value" id="dividendCount">0개</div></div>
@@ -2160,7 +2175,22 @@
       monthlyChart = new Chart(ctx, {
         type: "line",
         data: { labels, datasets: [{ label: "월별 순투자금", data }] },
-        options: { responsive: true, plugins: { legend: { display: true } } }
+        options: {
+          responsive: true,
+          layout: { padding: { left: 8 } },
+          plugins: { legend: { display: true } },
+          scales: {
+            y: {
+              ticks: {
+                callback: v => {
+                  if (Math.abs(v) >= 1000000) return (v/1000000).toFixed(0) + "백만";
+                  if (Math.abs(v) >= 10000) return (v/10000).toFixed(0) + "만";
+                  return v.toLocaleString("ko-KR");
+                }
+              }
+            }
+          }
+        }
       });
     }
 
