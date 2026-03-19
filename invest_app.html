@@ -574,6 +574,31 @@
         <div class="item"><div class="title">배당 평가금 기준</div><div class="value" id="dividendBase">0원</div></div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>수익률 변화 그래프</h2>
+        <div class="section-meta" id="snapshotMeta">-</div>
+      </div>
+      <div class="summary" style="margin-bottom:16px;">
+        <div class="item"><div class="title">오늘 평가금</div><div class="value" id="snapValue">-</div></div>
+        <div class="item"><div class="title">오늘 매입금</div><div class="value" id="snapBuy">-</div></div>
+        <div class="item"><div class="title">오늘 손익</div><div class="value" id="snapProfit">-</div></div>
+        <div class="item"><div class="title">오늘 수익률</div><div class="value" id="snapRate">-</div></div>
+        <div class="item"><div class="title">스냅샷 기록 수</div><div class="value" id="snapCount">-</div></div>
+      </div>
+      <canvas id="snapshotChart"></canvas>
+      <div class="notice">앱을 열 때마다 오늘 날짜로 평가금을 자동 저장해. 매일 한 번씩 기록이 쌓이면서 수익률 변화를 볼 수 있어.</div>
+    </div>
+
+    <div class="card">
+      <h2>📥 데이터 내보내기</h2>
+      <div class="btn-row">
+        <button class="secondary" onclick="exportHoldingsCSV()">보유종목 CSV 다운로드</button>
+        <button class="secondary" onclick="exportTransactionsCSV()">거래기록 CSV 다운로드</button>
+      </div>
+      <div class="notice">엑셀에서 바로 열 수 있는 CSV 파일로 저장돼. 보유종목은 계좌/종목명/수량/매입금/현재가/평가금/수익률이 포함되고, 거래기록은 날짜/계좌/종목명/구분/수량/단가/총금액/메모가 포함돼.</div>
+    </div>
   </div>
 
   <script>
@@ -598,9 +623,11 @@
     let isaStockChart = null;
     let pensionStockChart = null;
     let monthlyChart = null;
+    let snapshotChart = null;
     let symbolHistoryChart = null;
     let editingTransactionId = null;
     let lastAmountEdited = "unit";
+    let snapshots = [];
 
     let expandedAccounts = { "ISA": false, "연금저축": false, "금현물계좌": false };
     let holdingsSortState = {
@@ -771,7 +798,8 @@
       }));
 
       await seedDefaultAccountTargetsIfEmpty();
-      await Promise.all([loadMonthlyInvestmentsFromSupabase(), loadAccountTargetsFromSupabase()]);
+      await Promise.all([loadMonthlyInvestmentsFromSupabase(), loadAccountTargetsFromSupabase(), loadSnapshotsFromSupabase()]);
+      await saveSnapshotIfNeeded();
       applySavedTargetsToInputs();
       buildMonthlySummaryRows();
       updateTransactionNameSuggestions();
@@ -2232,6 +2260,207 @@
       }
     }
 
+    // ===== 스냅샷 저장 / 불러오기 =====
+
+    async function loadSnapshotsFromSupabase() {
+      const { data, error } = await db.from("portfolio_snapshots").select("*").order("snapshot_date", { ascending: true });
+      if (error) { console.error("스냅샷 불러오기 실패:", error); return; }
+      snapshots = (data || []).map(s => ({
+        ...s,
+        total_value: intWon(s.total_value ?? 0),
+        total_buy: intWon(s.total_buy ?? 0),
+        total_profit: intWon(s.total_profit ?? 0),
+        total_rate: num(s.total_rate ?? 0)
+      }));
+    }
+
+    async function saveSnapshotIfNeeded() {
+      if (!holdings.length) return;
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+      // 오늘 이미 저장된 스냅샷이 있으면 업데이트, 없으면 새로 저장
+      const totalBuy = holdings.reduce((s, h) => s + intWon(h.buy), 0);
+      const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalProfit = totalValue - totalBuy;
+      const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
+
+      const payload = {
+        snapshot_date: todayStr,
+        total_value: totalValue,
+        total_buy: totalBuy,
+        total_profit: totalProfit,
+        total_rate: totalRate
+      };
+
+      const existing = snapshots.find(s => s.snapshot_date === todayStr);
+      if (existing) {
+        const { error } = await db.from("portfolio_snapshots").update(payload).eq("id", existing.id);
+        if (error) { console.error("스냅샷 업데이트 실패:", error); return; }
+        const idx = snapshots.findIndex(s => s.id === existing.id);
+        if (idx >= 0) snapshots[idx] = { ...existing, ...payload };
+      } else {
+        const { data, error } = await db.from("portfolio_snapshots").insert([payload]).select();
+        if (error) { console.error("스냅샷 저장 실패:", error); return; }
+        if (data?.length) snapshots.push({ ...data[0], ...payload });
+      }
+    }
+
+    function renderSnapshotChart() {
+      const ctx = document.getElementById("snapshotChart");
+      if (!ctx) return;
+
+      // 요약 수치 업데이트
+      const today = snapshots[snapshots.length - 1];
+      if (today) {
+        document.getElementById("snapValue").textContent = won(today.total_value);
+        document.getElementById("snapBuy").textContent = won(today.total_buy);
+        document.getElementById("snapProfit").textContent = won(today.total_profit);
+        document.getElementById("snapProfit").className = "value " + (today.total_profit >= 0 ? "profit" : "loss");
+        document.getElementById("snapRate").textContent = pct(today.total_rate);
+        document.getElementById("snapRate").className = "value " + (today.total_rate >= 0 ? "profit" : "loss");
+      }
+      document.getElementById("snapCount").textContent = snapshots.length + "건";
+      document.getElementById("snapshotMeta").textContent = snapshots.length ? `${snapshots[0].snapshot_date} ~ ${snapshots[snapshots.length-1].snapshot_date}` : "-";
+
+      const labels = snapshots.map(s => s.snapshot_date);
+      const valueData = snapshots.map(s => s.total_value);
+      const buyData = snapshots.map(s => s.total_buy);
+      const rateData = snapshots.map(s => parseFloat(num(s.total_rate).toFixed(2)));
+
+      if (snapshotChart) {
+        snapshotChart.data.labels = labels;
+        snapshotChart.data.datasets[0].data = valueData;
+        snapshotChart.data.datasets[1].data = buyData;
+        snapshotChart.data.datasets[2].data = rateData;
+        snapshotChart.update();
+        return;
+      }
+
+      snapshotChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "평가금",
+              data: valueData,
+              borderColor: "#2f6fed",
+              backgroundColor: "rgba(47,111,237,0.07)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: snapshots.length <= 30 ? 3 : 0,
+              borderWidth: 2,
+              yAxisID: "y"
+            },
+            {
+              label: "매입금",
+              data: buyData,
+              borderColor: "#9ca3af",
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 1.5,
+              borderDash: [4, 3],
+              yAxisID: "y"
+            },
+            {
+              label: "수익률(%)",
+              data: rateData,
+              borderColor: "#067647",
+              backgroundColor: "transparent",
+              fill: false,
+              tension: 0.3,
+              pointRadius: snapshots.length <= 30 ? 3 : 0,
+              borderWidth: 2,
+              yAxisID: "y2"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "top", labels: { font: { size: 12 }, boxWidth: 14, padding: 12 } },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  if (ctx.datasetIndex === 2) return `수익률: ${ctx.parsed.y.toFixed(2)}%`;
+                  return `${ctx.dataset.label}: ${won(ctx.parsed.y)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { maxTicksLimit: 10 } },
+            y: {
+              type: "linear",
+              position: "left",
+              ticks: { callback: v => Math.round(v).toLocaleString("ko-KR") + "원" }
+            },
+            y2: {
+              type: "linear",
+              position: "right",
+              grid: { drawOnChartArea: false },
+              ticks: { callback: v => v.toFixed(1) + "%" }
+            }
+          }
+        }
+      });
+    }
+
+    // ===== CSV 내보내기 =====
+
+    function downloadCSV(filename, rows) {
+      const BOM = "\uFEFF"; // 엑셀 한글 깨짐 방지
+      const csv = BOM + rows.map(row =>
+        row.map(cell => {
+          const str = String(cell ?? "");
+          return str.includes(",") || str.includes('"') || str.includes("\n")
+            ? `"${str.replace(/"/g, '""')}"` : str;
+        }).join(",")
+      ).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportHoldingsCSV() {
+      if (!holdings.length) return alert("보유종목이 없어.");
+      const header = ["계좌", "자산군", "종목명", "티커", "수량", "총매입금", "평균단가", "현재가", "평가금", "손익", "수익률(%)"];
+      const rows = [header, ...holdings.map(h => {
+        const qty = intQty(h.qty);
+        const buy = intWon(h.buy);
+        const price = intWon(h.price);
+        const value = intWon(qty * price);
+        const profit = value - buy;
+        const rate = buy > 0 ? ((profit / buy) * 100).toFixed(2) : "0.00";
+        const avg = qty > 0 ? Math.round(buy / qty) : 0;
+        return [h.account, h.assetType, h.name, h.ticker || "", qty, buy, avg, price, value, profit, rate];
+      })];
+      const today = new Date().toISOString().slice(0, 10);
+      downloadCSV(`보유종목_${today}.csv`, rows);
+    }
+
+    function exportTransactionsCSV() {
+      if (!transactions.length) return alert("거래기록이 없어.");
+      const header = ["거래일", "계좌", "종목명", "티커", "구분", "수량", "1주단가", "총금액", "메모"];
+      const allTx = [...transactions].sort((a, b) => a.trade_date.localeCompare(b.trade_date));
+      const rows = [header, ...allTx.map(t => [
+        t.trade_date, t.account, t.name, t.ticker || "",
+        t.trade_type || "매수",
+        intQty(t.quantity), intWon(t.unit_price), intWon(t.total_amount),
+        t.memo || ""
+      ])];
+      const today = new Date().toISOString().slice(0, 10);
+      downloadCSV(`거래기록_${today}.csv`, rows);
+    }
+
     function render() {
       renderSummary();
       renderAccountSummary();
@@ -2243,6 +2472,7 @@
       renderDividendSummary();
       renderMonthlyTable();
       renderMonthlyChart();
+      renderSnapshotChart();
       updateTransactionNameSuggestions();
       syncChartHoldingOptions();
     }
