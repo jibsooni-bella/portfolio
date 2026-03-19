@@ -2281,7 +2281,6 @@
     async function saveSnapshotIfNeeded() {
       if (!holdings.length) return;
 
-      // ✅ 오후 3시 20분(15:20) 이후에만 자동저장
       const now = new Date();
       const hour = now.getHours();
       const minute = now.getMinutes();
@@ -2292,6 +2291,8 @@
       }
 
       await doSaveSnapshot();
+      // ✅ 저장 후 Supabase에서 최신 스냅샷 다시 불러오기
+      await loadSnapshotsFromSupabase();
     }
 
     async function doSaveSnapshot() {
@@ -2337,8 +2338,12 @@
       status.textContent = "";
 
       try {
-        const savedDate = await doSaveSnapshot();
-        status.textContent = `✅ ${savedDate} 평가금 저장 완료!`;
+        await doSaveSnapshot();
+        // ✅ 저장 후 Supabase에서 최신 스냅샷 다시 불러오기
+        await loadSnapshotsFromSupabase();
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+        status.textContent = `✅ ${todayStr} 평가금 저장 완료!`;
         renderSnapshotChart();
       } catch (e) {
         status.textContent = "❌ 저장 실패: " + e.message;
