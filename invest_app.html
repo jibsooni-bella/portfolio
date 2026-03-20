@@ -421,7 +421,7 @@
           <thead>
             <tr>
               <th>거래일</th><th>계좌</th><th>종목명</th><th>티커</th><th>구분</th>
-              <th class="num">수량</th><th class="num">1주 단가</th><th class="num">총금액</th>
+              <th class="num">수량</th><th class="num">잔여수량</th><th class="num">1주 단가</th><th class="num">총금액</th>
               <th>메모</th><th>수정</th><th>삭제</th>
             </tr>
           </thead>
@@ -1886,6 +1886,62 @@
       }).join("");
     }
 
+    // ✅ 보유종목(holdings) 기준으로 거래기록 역순 계산해서 잔여수량 구하기
+    // 현재 보유수량에서 최신 거래부터 역으로 빼고 더해서 각 시점의 잔여수량 계산
+    function calcRemainingQty() {
+      // 종목별 현재 보유수량 맵 (계좌+종목명+티커 기준)
+      const currentQtyMap = {};
+      holdings.forEach(h => {
+        const key = `${h.account}||${normalizeText(h.name)}||${normalizeText(h.ticker || "")}`;
+        currentQtyMap[key] = intQty(h.qty);
+      });
+
+      // 날짜+id 기준 오름차순 정렬 (오래된 것부터)
+      const sorted = [...transactions].sort((a, b) => {
+        const dateDiff = (a.trade_date || "").localeCompare(b.trade_date || "");
+        return dateDiff !== 0 ? dateDiff : a.id - b.id;
+      });
+
+      // 현재 보유수량에서 역순으로 거슬러 올라가며 각 시점 잔여수량 계산
+      const runningQty = { ...currentQtyMap };
+      // 최신→과거 역순으로 "되돌리기"
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        const t = sorted[i];
+        const key = `${t.account}||${normalizeText(t.name)}||${normalizeText(t.ticker || "")}`;
+        if (!(key in runningQty)) runningQty[key] = 0;
+      }
+
+      // 오래된 것부터 순서대로 잔여수량 누적 계산
+      const remainingMap = {};  // id → 잔여수량
+      const qtyAccum = {};      // key → 누적수량 (처음엔 0에서 시작)
+
+      // 현재 보유 - 전체 거래 합산 = 거래 이전 보유
+      const txTotals = {};
+      sorted.forEach(t => {
+        const key = `${t.account}||${normalizeText(t.name)}||${normalizeText(t.ticker || "")}`;
+        if (!txTotals[key]) txTotals[key] = 0;
+        const isBuy = (t.trade_type || "매수") === "매수";
+        txTotals[key] += isBuy ? intQty(t.quantity) : -intQty(t.quantity);
+      });
+
+      // 거래 이전 초기 보유수량 = 현재보유 - 거래합산
+      Object.keys(txTotals).forEach(key => {
+        qtyAccum[key] = Math.max(0, (currentQtyMap[key] || 0) - txTotals[key]);
+      });
+
+      // 오래된 것부터 누적하며 각 거래 직후 잔여수량 기록
+      sorted.forEach(t => {
+        const key = `${t.account}||${normalizeText(t.name)}||${normalizeText(t.ticker || "")}`;
+        if (!(key in qtyAccum)) qtyAccum[key] = 0;
+        const isBuy = (t.trade_type || "매수") === "매수";
+        qtyAccum[key] += isBuy ? intQty(t.quantity) : -intQty(t.quantity);
+        qtyAccum[key] = Math.max(0, qtyAccum[key]);
+        remainingMap[t.id] = qtyAccum[key];
+      });
+
+      return remainingMap;
+    }
+
     function renderTransactions() {
       const body = document.getElementById("transactionsBody");
       const mobileBody = document.getElementById("transactionsMobileBody");
@@ -1893,7 +1949,7 @@
       const meta = document.getElementById("transactionsMeta");
 
       if (!transactions.length) {
-        body.innerHTML = `<tr><td colspan="11" class="empty-text">거래기록이 없어.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="12" class="empty-text">거래기록이 없어.</td></tr>`;
         if (mobileBody) mobileBody.innerHTML = `<div class="empty-text">거래기록이 없어.</div>`;
         meta.textContent = "거래기록 0건";
         btn.textContent = "전체보기";
@@ -1904,21 +1960,30 @@
       meta.textContent = showAllTransactions ? `전체 ${transactions.length}건 표시` : `최근 ${visible.length}건 표시 / 전체 ${transactions.length}건`;
       btn.textContent = showAllTransactions ? "최근만 보기" : "전체보기";
 
+      // 잔여수량 계산
+      const remainingMap = calcRemainingQty();
+
       // 데스크탑 테이블
-      body.innerHTML = visible.map(t => `
+      body.innerHTML = visible.map(t => {
+        const remaining = remainingMap[t.id];
+        const remainingText = remaining !== undefined ? remaining.toLocaleString("ko-KR") + "주" : "-";
+        const isBuy = (t.trade_type || "매수") === "매수";
+        return `
         <tr>
           <td>${esc(t.trade_date || "")}</td>
           <td>${esc(t.account || "")}</td>
           <td>${esc(t.name || "")}</td>
           <td>${esc(t.ticker || "")}</td>
           <td>${esc(t.trade_type || "매수")}</td>
-          <td class="num">${intQty(t.quantity).toLocaleString("ko-KR")}</td>
+          <td class="num">${isBuy ? "+" : "-"}${intQty(t.quantity).toLocaleString("ko-KR")}</td>
+          <td class="num" style="color:#667085;font-weight:700;">${remainingText}</td>
           <td class="num">${won(t.unit_price)}</td>
           <td class="num">${won(t.total_amount)}</td>
           <td>${esc(t.memo || "")}</td>
           <td><button class="warning" onclick="startTransactionEdit(${t.id})">수정</button></td>
           <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
-        </tr>`).join("");
+        </tr>`;
+      }).join("");
 
       // 모바일 카드뷰
       if (mobileBody) {
@@ -1932,7 +1997,8 @@
               </div>
               <div class="tx-card-meta">${esc(t.trade_date || "")} · ${esc(t.account || "")}${t.ticker ? " · " + esc(t.ticker) : ""}${t.memo ? " · " + esc(t.memo) : ""}</div>
               <div class="tx-card-grid">
-                <div class="tx-card-stat"><div class="label">수량</div><div class="value">${intQty(t.quantity).toLocaleString("ko-KR")}주</div></div>
+                <div class="tx-card-stat"><div class="label">수량</div><div class="value">${(isBuy ? "+" : "-") + intQty(t.quantity).toLocaleString("ko-KR")}주</div></div>
+                <div class="tx-card-stat"><div class="label">잔여수량</div><div class="value" style="color:#667085;">${remainingMap[t.id] !== undefined ? remainingMap[t.id].toLocaleString("ko-KR") + "주" : "-"}</div></div>
                 <div class="tx-card-stat"><div class="label">1주 단가</div><div class="value">${won(t.unit_price)}</div></div>
                 <div class="tx-card-stat"><div class="label">총금액</div><div class="value">${won(t.total_amount)}</div></div>
                 <div class="tx-card-stat"><div class="label">계좌</div><div class="value">${esc(t.account || "")}</div></div>
