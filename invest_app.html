@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body { margin: 0; font-family: Arial, sans-serif; background: #f5f7fb; color: #222; }
     .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 14px 40px; }
     h1 { margin: 0 0 18px; font-size: 32px; font-weight: 800; }
@@ -369,13 +370,78 @@
       /* 수익률 그래프 요약 — 2열 */
       #snapValue, #snapBuy, #snapProfit, #snapRate, #snapCount { font-size: 15px; }
     }
+
+    /* ===== 상단 고정 네비게이션 ===== */
+    .top-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: #fff;
+      border-bottom: 1px solid #e3ebff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 48px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .top-nav::-webkit-scrollbar { display: none; }
+    .top-nav-btn {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #e3ebff;
+      background: #f8faff;
+      color: #2f6fed;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .top-nav-btn:hover { background: #2f6fed; color: #fff; border-color: #2f6fed; }
+    .top-nav-logo {
+      font-size: 15px;
+      font-weight: 800;
+      color: #222;
+      margin-right: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* 네비게이션 높이만큼 본문 밀어내기 */
+    body { padding-top: 48px; }
+
+    @media (max-width: 900px) {
+      .top-nav { padding: 0 10px; gap: 3px; }
+      .top-nav-btn { font-size: 12px; padding: 5px 10px; }
+      .top-nav-logo { font-size: 13px; }
+    }
+
   </style>
 </head>
 <body>
+  <nav class="top-nav">
+    <span class="top-nav-logo">📊 ETF</span>
+    <a class="top-nav-btn" href="#sec-trade">거래입력</a>
+    <a class="top-nav-btn" href="#sec-history">거래기록</a>
+    <a class="top-nav-btn" href="#sec-summary">전체요약</a>
+    <a class="top-nav-btn" href="#sec-holdings">보유종목</a>
+    <a class="top-nav-btn" href="#sec-chart">차트조회</a>
+    <a class="top-nav-btn" href="#sec-rebalance">리밸런싱</a>
+    <a class="top-nav-btn" href="#sec-monthly">월별기록</a>
+    <a class="top-nav-btn" href="#sec-dividend">배당</a>
+    <a class="top-nav-btn" href="#sec-snapshot">수익률그래프</a>
+    <a class="top-nav-btn" href="#sec-export">내보내기</a>
+  </nav>
   <div class="wrap">
     <h1>📊 ETF 투자 관리</h1>
 
-    <div class="card">
+    <div class="card" id="sec-trade">
       <h2>거래기록 추가</h2>
       <div class="grid">
         <div><label for="txDate">거래일</label><input id="txDate" type="date" /></div>
@@ -407,7 +473,7 @@
       <div class="last-update" id="lastUpdateText">마지막 업데이트: -</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-history">
       <div class="section-head">
         <h2>거래기록</h2>
         <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
@@ -432,7 +498,7 @@
       <div class="tx-mobile" id="transactionsMobileBody"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-summary">
       <h2>전체 요약</h2>
       <div class="summary">
         <div class="item"><div class="title">총 평가금</div><div class="value" id="sumValue">0원</div></div>
@@ -443,7 +509,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-account">
       <h2>계좌별 요약</h2>
       <div class="account-summary-list">
         <div class="account-summary-row">
@@ -476,9 +542,9 @@
       </div>
     </div>
 
-    <div class="card"><h2>보유 종목</h2><div id="holdingsSections"></div></div>
+    <div class="card" id="sec-holdings"><h2>보유 종목</h2><div id="holdingsSections"></div></div>
 
-    <div class="card">
+    <div class="card" id="sec-chart">
       <div class="section-head">
         <h2>종목 차트 조회</h2>
         <div class="section-meta" id="chartCurrentSymbolText">현재 선택: -</div>
@@ -532,7 +598,7 @@
       </div>
     </div>
 
-    <div class="grid-2">
+    <div class="grid-2" id="sec-rebalance">
       <div class="card">
         <div class="account-panel-title">ISA 자산 비중</div>
         <div class="dual-chart-wrap">
@@ -588,7 +654,7 @@
       </div>
     </div>
 
-    <div class="grid-2">
+    <div class="grid-2" id="sec-monthly">
       <div class="card">
         <h2>월별 투자 기록</h2>
         <div class="monthly-input-wrap">
@@ -615,7 +681,7 @@
       <div class="card"><h2>월별 순투자금 그래프</h2><canvas id="monthlyChart"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-dividend">
       <h2>배당 요약</h2>
       <div class="grid-4 dividend-grid">
         <div class="item"><div class="title">올해 예상 배당금</div><div class="value" id="dividendYear">0원</div></div>
@@ -625,7 +691,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-snapshot">
       <div class="section-head">
         <h2>수익률 변화 그래프</h2>
         <div class="section-meta" id="snapshotMeta">-</div>
@@ -645,7 +711,7 @@
       <div class="notice">오후 3시 20분(장 마감) 이후에 앱을 열면 자동으로 저장돼. 그 전에 열었다면 장 마감 후 직접 버튼을 눌러 저장할 수 있어. 하루 한 번 기록이 쌓이면서 수익률 변화를 볼 수 있어.</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="sec-export">
       <h2>📥 데이터 내보내기</h2>
       <div class="btn-row">
         <button class="secondary" onclick="exportHoldingsCSV()">보유종목 CSV 다운로드</button>
@@ -2713,6 +2779,20 @@
     reloadAllData().catch(err => {
       alert("초기 불러오기 실패: " + err.message + "\\n\\nmonthly_investments / account_targets 테이블 생성 여부도 확인해줘.");
       console.error(err);
+    });
+
+    // 네비게이션 앵커 클릭 시 상단 네비바 높이만큼 오프셋 보정
+    document.querySelectorAll('.top-nav-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (!href || !href.startsWith('#')) return;
+        e.preventDefault();
+        const target = document.querySelector(href);
+        if (!target) return;
+        const navHeight = 56;
+        const top = target.getBoundingClientRect().top + window.scrollY - navHeight;
+        window.scrollTo({ top, behavior: 'smooth' });
+      });
     });
   </script>
 </body>
