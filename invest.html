@@ -371,19 +371,23 @@
       #snapValue, #snapBuy, #snapProfit, #snapRate, #snapCount { font-size: 15px; }
     }
 
-    /* ===== 월별 소계행 ===== */
-    .tx-month-row td {
-      background: #f0f5ff;
-      border-top: 2px solid #c3d4fa;
-      border-bottom: 1px solid #c3d4fa;
-      font-weight: 800;
-      font-size: 13px;
-      padding: 8px 8px;
+    /* ===== 월별 소계 박스 ===== */
+    .tx-month-box {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      background: #eef3ff;
+      border: 1px solid #c3d4fa;
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin: 16px 0 6px;
     }
-    .tx-month-label { color: #2f6fed; font-size: 13px; font-weight: 800; }
-    .tx-month-buy { color: #067647; font-weight: 700; }
-    .tx-month-sell { color: #b42318; font-weight: 700; }
-    .tx-month-net { color: #222; font-weight: 800; }
+    .tx-month-label { color: #2f6fed; font-size: 14px; font-weight: 800; }
+    .tx-month-buy { color: #067647; font-size: 13px; font-weight: 700; }
+    .tx-month-sell { color: #b42318; font-size: 13px; font-weight: 700; }
+    .tx-month-net { color: #222; font-size: 13px; font-weight: 800; }
+    .tx-month-divider { color: #c3d4fa; font-size: 13px; }
 
     /* ===== 상단 고정 네비게이션 ===== */
     .top-nav {
@@ -2057,9 +2061,7 @@
       // 잔여수량 계산
       const remainingMap = calcRemainingQty();
 
-      // 데스크탑 테이블 — 월별 소계행 포함
-      // visible 기준으로 월별 매수/매도 합계 미리 계산
-      // (전체 transactions 기준으로 해야 정확하지만, visible 기준으로도 충분히 유용)
+      // 데스크탑 — 월별 소계 박스 + 테이블 분리 렌더링
       const monthTotals = {};
       visible.forEach(t => {
         const month = monthKeyFromDate(t.trade_date);
@@ -2068,45 +2070,71 @@
         else monthTotals[month].sell += intWon(t.total_amount);
       });
 
-      let lastMonth = null;
-      const rows = [];
+      // 월별로 거래 그룹핑
+      const monthGroups = [];
+      let currentMonth = null;
       visible.forEach(t => {
         const month = monthKeyFromDate(t.trade_date);
-        // 월이 바뀌면 소계행 삽입
-        if (month !== lastMonth) {
-          const mt = monthTotals[month];
-          const net = mt.buy - mt.sell;
-          rows.push(`
-            <tr class="tx-month-row">
-              <td colspan="2"><span class="tx-month-label">📅 ${month}</span></td>
-              <td colspan="4"></td>
-              <td class="num tx-month-buy">매수 +${mt.buy.toLocaleString("ko-KR")}원</td>
-              <td class="num tx-month-sell">${mt.sell > 0 ? "매도 -" + mt.sell.toLocaleString("ko-KR") + "원" : "-"}</td>
-              <td class="num tx-month-net">순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</td>
-              <td colspan="3"></td>
-            </tr>`);
-          lastMonth = month;
+        if (month !== currentMonth) {
+          monthGroups.push({ month, items: [] });
+          currentMonth = month;
         }
-        const remaining = remainingMap[t.id];
-        const remainingText = remaining !== undefined ? remaining.toLocaleString("ko-KR") + "주" : "-";
-        const isBuy = (t.trade_type || "매수") === "매수";
-        rows.push(`
-        <tr>
-          <td>${esc(t.trade_date || "")}</td>
-          <td>${esc(t.account || "")}</td>
-          <td>${esc(t.name || "")}</td>
-          <td>${esc(t.ticker || "")}</td>
-          <td>${esc(t.trade_type || "매수")}</td>
-          <td class="num">${isBuy ? "+" : "-"}${intQty(t.quantity).toLocaleString("ko-KR")}</td>
-          <td class="num" style="color:#667085;font-weight:700;">${remainingText}</td>
-          <td class="num">${won(t.unit_price)}</td>
-          <td class="num">${won(t.total_amount)}</td>
-          <td>${esc(t.memo || "")}</td>
-          <td><button class="warning" onclick="startTransactionEdit(${t.id})">수정</button></td>
-          <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
-        </tr>`);
+        monthGroups[monthGroups.length - 1].items.push(t);
       });
-      body.innerHTML = rows.join("");
+
+      const theadHTML = `
+        <table class="transactions-table">
+          <colgroup>
+            <col style="width:100px"><col style="width:80px"><col style="width:160px">
+            <col style="width:110px"><col style="width:60px"><col style="width:65px">
+            <col style="width:75px"><col style="width:100px"><col style="width:105px">
+            <col style="width:80px"><col style="width:65px"><col style="width:65px">
+          </colgroup>
+          <thead><tr>
+            <th>거래일</th><th>계좌</th><th>종목명</th><th>티커</th><th>구분</th>
+            <th class="num">수량</th><th class="num">잔여수량</th><th class="num">1주 단가</th>
+            <th class="num">총금액</th><th>메모</th><th>수정</th><th>삭제</th>
+          </tr></thead>`;
+
+      const tableWrap = body.closest(".table-wrap") || body.parentElement;
+      // table-wrap 안을 비우고 월별 박스+테이블로 채우기
+      tableWrap.innerHTML = monthGroups.map(group => {
+        const mt = monthTotals[group.month];
+        const net = mt.buy - mt.sell;
+        const rowsHTML = group.items.map(t => {
+          const remaining = remainingMap[t.id];
+          const remainingText = remaining !== undefined ? remaining.toLocaleString("ko-KR") + "주" : "-";
+          const isBuy = (t.trade_type || "매수") === "매수";
+          return `
+            <tr>
+              <td>${esc(t.trade_date || "")}</td>
+              <td>${esc(t.account || "")}</td>
+              <td>${esc(t.name || "")}</td>
+              <td>${esc(t.ticker || "")}</td>
+              <td>${esc(t.trade_type || "매수")}</td>
+              <td class="num">${isBuy ? "+" : "-"}${intQty(t.quantity).toLocaleString("ko-KR")}</td>
+              <td class="num" style="color:#667085;font-weight:700;">${remainingText}</td>
+              <td class="num">${won(t.unit_price)}</td>
+              <td class="num">${won(t.total_amount)}</td>
+              <td>${esc(t.memo || "")}</td>
+              <td><button class="warning" onclick="startTransactionEdit(${t.id})">수정</button></td>
+              <td><button class="danger" onclick="deleteTransaction(${t.id})">삭제</button></td>
+            </tr>`;
+        }).join("");
+
+        return `
+          <div class="tx-month-box">
+            <span class="tx-month-label">📅 ${group.month}</span>
+            <span class="tx-month-divider">|</span>
+            <span class="tx-month-buy">매수 +${mt.buy.toLocaleString("ko-KR")}원</span>
+            ${mt.sell > 0 ? `<span class="tx-month-divider">|</span><span class="tx-month-sell">매도 -${mt.sell.toLocaleString("ko-KR")}원</span>` : ""}
+            <span class="tx-month-divider">|</span>
+            <span class="tx-month-net">순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</span>
+          </div>
+          <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;">
+            ${theadHTML}<tbody>${rowsHTML}</tbody></table>
+          </div>`;
+      }).join("");
 
       // 모바일 카드뷰 — 월별 구분 헤더 포함
       if (mobileBody) {
@@ -2121,9 +2149,9 @@
               <div style="background:#f0f5ff;border-top:2px solid #c3d4fa;border-radius:10px;padding:10px 14px;margin-bottom:6px;">
                 <span style="color:#2f6fed;font-weight:800;font-size:14px;">📅 ${month}</span>
                 <div style="margin-top:6px;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;">
-                  <span style="color:#067647;font-weight:700;">매수 +${mt.buy.toLocaleString("ko-KR")}원</span>
-                  ${mt.sell > 0 ? `<span style="color:#b42318;font-weight:700;">매도 -${mt.sell.toLocaleString("ko-KR")}원</span>` : ""}
-                  <span style="font-weight:800;">순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</span>
+                  <span style="color:#067647;font-weight:700;">매수 +${fmtWon(mt.buy)}원</span>
+                  ${mt.sell > 0 ? `<span style="color:#b42318;font-weight:700;margin-left:8px;">매도 -${fmtWon(mt.sell)}원</span>` : ""}
+                  <span style="font-weight:800;margin-left:8px;">순 ${net >= 0 ? "+" : ""}${fmtWon(net)}원</span>
                 </div>
               </div>`);
             lastMonthMobile = month;
