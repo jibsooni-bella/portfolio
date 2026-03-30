@@ -808,6 +808,11 @@
       return Math.round(num(n)).toLocaleString("ko-KR") + "원";
     }
 
+    // 금액을 정확하게 표시 (만원/억 단위 없이 전체 숫자)
+    function fmtWon(v) {
+      return v.toLocaleString("ko-KR");
+    }
+
     function pct(n) {
       return `${num(n).toFixed(2)}%`;
     }
