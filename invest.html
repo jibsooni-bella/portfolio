@@ -500,7 +500,7 @@
         <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
       </div>
       <!-- 데스크탑 테이블 -->
-      <div class="table-wrap tx-desktop">
+      <div class="table-wrap tx-desktop" id="txDesktopWrap">
         <table class="transactions-table">
           <colgroup>
             <col style="width:100px">
@@ -2101,7 +2101,7 @@
             <th class="num">총금액</th><th>메모</th><th>수정</th><th>삭제</th>
           </tr></thead>`;
 
-      const tableWrap = body.closest(".table-wrap") || body.parentElement;
+      const tableWrap = document.getElementById("txDesktopWrap");
       // table-wrap 안을 비우고 월별 박스+테이블로 채우기
       tableWrap.innerHTML = monthGroups.map(group => {
         const mt = monthTotals[group.month];
