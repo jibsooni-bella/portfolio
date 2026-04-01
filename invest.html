@@ -1643,6 +1643,14 @@
       item[field] = updateValue;
       if (["name", "ticker", "account"].includes(field)) item.assetType = classifyAsset(item.name, item.ticker, item.account);
 
+      // ✅ 배당주기 또는 1회주당배당 변경 시 올해예상주당배당 자동 계산
+      if (["dividendCycle", "dividendPerPayment"].includes(field)) {
+        const cycle = item.dividendCycle || "직접입력";
+        if (cycle !== "직접입력") {
+          item.expectedDividendPerShare = num(item.dividendPerPayment) * getCycleCount(cycle);
+        }
+      }
+
       const updatePayload = {
         account: item.account,
         assetType: item.assetType,
@@ -1832,7 +1840,7 @@
             ${!isGoldAccount ? `
               <td class="cycle-cell"><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></td>
               <td class="dividend-per-payment-cell num"><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></td>
-              <td class="dividend-input-cell num"><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></td>
+              <td class="dividend-input-cell num"><input type="number" step="any" value="${expectedDividendPerShare}" style="background:#f8faff;color:#2f6fed;font-weight:700;" readonly title="배당주기×1회주당배당으로 자동계산. 직접입력 모드에서는 직접 수정 가능." /></td>
               <td class="dividend-value-cell num">${won(yearlyDividend)}<br><span class="muted">${pct(derivedDividendYield)}</span></td>
             ` : ``}
             <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
@@ -1900,7 +1908,7 @@
                 ${!isGoldAccount ? `
                   <div><label>배당주기</label><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></div>
                   <div><label>1회주당배당</label><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></div>
-                  <div><label>올해예상주당배당</label><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></div>
+                  <div><label>올해예상주당배당 (자동계산)</label><input type="number" step="any" value="${expectedDividendPerShare}" style="background:#f8faff;color:#2f6fed;font-weight:700;" readonly /></div>
                   <div><label>예상배당 / 수익률</label><input value="${won(yearlyDividend)} / ${pct(derivedDividendYield)}" readonly /></div>
                 ` : ""}
               </div>
