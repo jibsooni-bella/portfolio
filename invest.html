@@ -112,8 +112,8 @@
     .profit-cell { width: 120px; }
     .rate-cell { width: 90px; }
     .weight-cell { width: 90px; }
-    .cycle-cell { width: 110px; }
-    .dividend-per-payment-cell { width: 120px; }
+    .cycle-cell { display: none; }
+    .dividend-per-payment-cell { display: none; }
     .dividend-input-cell { width: 130px; }
     .dividend-value-cell { width: 130px; }
     .action-cell { width: 92px; }
@@ -1747,13 +1747,9 @@
     }
 
     function renderDividendSummary() {
-      const dividendItems = holdings.filter(h => h.account !== "금현물계좌").filter(h => calcExpectedDividendPerShare(h) > 0 || num(h.dividendYield) > 0);
-      const yearly = dividendItems.reduce((s, h) => {
-        const expectedPerShare = calcExpectedDividendPerShare(h);
-        if (expectedPerShare > 0) return s + intQty(h.qty) * expectedPerShare;
-        const value = intQty(h.qty) * intWon(h.price);
-        return s + value * (num(h.dividendYield) / 100);
-      }, 0);
+      // ✅ 단순화: 연간 예상 주당배당(expectedDividendPerShare) 직접 입력값만 사용
+      const dividendItems = holdings.filter(h => h.account !== "금현물계좌" && num(h.expectedDividendPerShare) > 0);
+      const yearly = dividendItems.reduce((s, h) => s + intQty(h.qty) * num(h.expectedDividendPerShare), 0);
       const base = dividendItems.reduce((s, h) => s + intQty(h.qty) * intWon(h.price), 0);
       document.getElementById("dividendYear").textContent = won(yearly);
       document.getElementById("dividendMonth").textContent = won(yearly / 12);
@@ -1797,8 +1793,8 @@
           <col class="profit-cell">
           <col class="rate-cell">
           <col class="weight-cell">
-          <col class="cycle-cell">
-          <col class="dividend-per-payment-cell">
+          <col class="cycle-cell" style="display:none;">
+          <col class="dividend-per-payment-cell" style="display:none;">
           <col class="dividend-input-cell">
           <col class="dividend-value-cell">
           <col class="action-cell">
@@ -1815,12 +1811,9 @@
         const profit = value - intWon(h.buy);
         const rate = intWon(h.buy) > 0 ? (profit / intWon(h.buy)) * 100 : 0;
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
-        const cycle = h.dividendCycle || "직접입력";
-        const dividendPerPayment = num(h.dividendPerPayment);
-        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
-        const fallbackYield = num(h.dividendYield);
-        const yearlyDividend = expectedDividendPerShare > 0 ? intQty(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
-        const derivedDividendYield = expectedDividendPerShare > 0 ? (intWon(h.price) > 0 ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0) : fallbackYield;
+        const expectedDividendPerShare = num(h.expectedDividendPerShare);
+        const yearlyDividend = intQty(h.qty) * expectedDividendPerShare;
+        const derivedDividendYield = (expectedDividendPerShare > 0 && intWon(h.price) > 0) ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0;
         const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
 
         return `
@@ -1838,14 +1831,8 @@
             <td class="rate-cell num ${rate >= 0 ? "profit" : "loss"}">${pct(rate)}</td>
             <td class="weight-cell num">${pct(weight)}</td>
             ${!isGoldAccount ? `
-              <td class="cycle-cell"><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></td>
-              <td class="dividend-per-payment-cell num"><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></td>
-              <td class="dividend-input-cell num">
-                ${cycle === "직접입력"
-                  ? `<input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" title="직접 입력 모드: 올해 예상 연간 주당배당 직접 입력" />`
-                  : `<input type="number" step="any" value="${expectedDividendPerShare}" style="background:#f8faff;color:#2f6fed;font-weight:700;" readonly title="배당주기×1회주당배당 자동계산값" />`
-                }
-              </td>
+
+              <td class="dividend-input-cell num"><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" title="올해 예상 연간 주당배당 (예: PLUS고배당주 → 935)" /></td>
               <td class="dividend-value-cell num">${won(yearlyDividend)}<br><span class="muted">${pct(derivedDividendYield)}</span></td>
             ` : ``}
             <td class="action-cell"><button class="secondary" onclick="updateOnePrice(${h.id})">${updateButtonLabel}</button></td>
@@ -1864,10 +1851,9 @@
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
         const cycle = h.dividendCycle || "직접입력";
         const dividendPerPayment = num(h.dividendPerPayment);
-        const expectedDividendPerShare = calcExpectedDividendPerShare(h);
-        const fallbackYield = num(h.dividendYield);
-        const yearlyDividend = expectedDividendPerShare > 0 ? intQty(h.qty) * expectedDividendPerShare : value * (fallbackYield / 100);
-        const derivedDividendYield = expectedDividendPerShare > 0 ? (intWon(h.price) > 0 ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0) : fallbackYield;
+        const expectedDividendPerShare = num(h.expectedDividendPerShare);
+        const yearlyDividend = intQty(h.qty) * expectedDividendPerShare;
+        const derivedDividendYield = (expectedDividendPerShare > 0 && intWon(h.price) > 0) ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0;
         const updateButtonLabel = isManualGold(h) ? "수동" : "가격갱신";
 
         return `
@@ -1911,15 +1897,8 @@
                 <div><label>수익률</label><input value="${pct(rate)}" readonly /></div>
 
                 ${!isGoldAccount ? `
-                  <div><label>배당주기</label><select onchange="updateField(${h.id}, 'dividendCycle', this.value)"><option value="직접입력" ${cycle === "직접입력" ? "selected" : ""}>직접입력</option><option value="월배당" ${cycle === "월배당" ? "selected" : ""}>월배당</option><option value="분기배당" ${cycle === "분기배당" ? "selected" : ""}>분기배당</option><option value="반기배당" ${cycle === "반기배당" ? "selected" : ""}>반기배당</option><option value="연배당" ${cycle === "연배당" ? "selected" : ""}>연배당</option></select></div>
-                  <div><label>1회주당배당</label><input type="number" step="any" value="${dividendPerPayment}" onchange="updateField(${h.id}, 'dividendPerPayment', this.value)" /></div>
-                  <div>
-                    <label>올해예상주당배당${cycle === "직접입력" ? "" : " (자동계산)"}</label>
-                    ${cycle === "직접입력"
-                      ? `<input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" />`
-                      : `<input type="number" step="any" value="${expectedDividendPerShare}" style="background:#f8faff;color:#2f6fed;font-weight:700;" readonly />`
-                    }
-                  </div>
+
+                  <div><label>연간 예상 주당배당</label><input type="number" step="any" value="${num(h.expectedDividendPerShare)}" onchange="updateField(${h.id}, 'expectedDividendPerShare', this.value)" /></div>
                   <div><label>예상배당 / 수익률</label><input value="${won(yearlyDividend)} / ${pct(derivedDividendYield)}" readonly /></div>
                 ` : ""}
               </div>
@@ -1978,9 +1957,8 @@
                         ${renderSortableHeader(section.title, "rate", "수익률", "rate-cell num")}
                         ${renderSortableHeader(section.title, "weight", "보유비중", "weight-cell num")}
                         ${!isGoldAccount ? `
-                          <th class="cycle-cell">배당주기</th>
-                          <th class="dividend-per-payment-cell num">1회주당배당</th>
-                          <th class="dividend-input-cell num">올해예상주당배당</th>
+
+                          <th class="dividend-input-cell num">연간 예상 주당배당</th>
                           <th class="dividend-value-cell num">예상배당 / 수익률</th>
                         ` : ""}
                         <th class="action-cell">가격갱신</th>
