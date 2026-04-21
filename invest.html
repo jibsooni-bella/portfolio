@@ -1693,7 +1693,21 @@
     // ✅ 핵심 개선: 가격을 한 번에 동시에 가져오기 (병렬 처리)
     // 기존: 종목 하나씩 순서대로 → 10종목이면 10번 기다림
     // 개선: 모든 종목 동시에 요청 → 1번만 기다림
+    // 가격 저장 재시도 함수 (최대 3번)
+    async function savepriceWithRetry(h, latest, maxRetry = 3) {
+      for (let i = 0; i < maxRetry; i++) {
+        const { error } = await db.from("holdings").update({ price: intWon(latest) }).eq("id", h.id);
+        if (!error) return true;
+        console.warn(`가격 저장 재시도 ${i + 1}/${maxRetry}:`, h.ticker, error.message);
+        if (i < maxRetry - 1) await new Promise(r => setTimeout(r, 500)); // 0.5초 대기 후 재시도
+      }
+      return false;
+    }
+
     async function updateAllPrices(showAlert = true) {
+      const failed = [];
+      const retryFailed = [];
+
       await Promise.all(
         holdings
           .filter(h => h.ticker && !isManualGold(h))
@@ -1702,17 +1716,32 @@
               const latest = await fetchPriceFromWorker(h.ticker);
               if (latest) {
                 h.price = intWon(latest);
-                const { error } = await db.from("holdings").update({ price: intWon(latest) }).eq("id", h.id);
-                if (error) console.error("가격 저장 실패:", h.ticker, error);
+                const ok = await savepriceWithRetry(h, latest);
+                if (!ok) retryFailed.push(h.name);
+              } else {
+                failed.push(h.name);
               }
             } catch (e) {
               console.error("가격 조회 실패:", h.ticker, e);
+              failed.push(h.name);
             }
           })
       );
+
       setLastUpdateText();
       render();
-      if (showAlert) alert("ETF 가격 업데이트 완료!");
+
+      if (showAlert) {
+        if (retryFailed.length > 0 || failed.length > 0) {
+          const failMsg = [
+            retryFailed.length > 0 ? `저장 실패 (${retryFailed.length}개): ${retryFailed.join(", ")}` : "",
+            failed.length > 0 ? `조회 실패 (${failed.length}개): ${failed.join(", ")}` : ""
+          ].filter(Boolean).join("\n");
+          alert(`ETF 가격 업데이트 완료!\n\n⚠️ 일부 실패:\n${failMsg}\n\n다시 한번 업데이트 버튼을 눌러봐요.`);
+        } else {
+          alert("ETF 가격 업데이트 완료! ✅ 전체 성공");
+        }
+      }
     }
 
     function renderSummary() {
