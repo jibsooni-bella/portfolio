@@ -712,13 +712,15 @@
         </div>
         <div class="notice">매수금액 / 매도금액 / 순투자금은 거래기록 기준으로 자동 집계되고, 수동 추가 금액은 해당 월 매수금액에 더해져.</div>
         <div class="table-wrap" style="margin-top:12px;">
-          <table style="min-width:520px;">
+          <table style="min-width:700px;">
             <thead>
               <tr>
                 <th>월</th>
-                <th class="num">매수금액</th>
-                <th class="num">매도금액</th>
-                <th class="num">순투자금</th>
+                <th class="num">전체 순투자금</th>
+                <th class="num">ISA 매수</th>
+                <th class="num">ISA 매도</th>
+                <th class="num">연금저축 매수</th>
+                <th class="num">연금저축 매도</th>
                 <th>수동추가 삭제</th>
               </tr>
             </thead>
@@ -984,17 +986,32 @@
 
     function buildMonthlySummaryRows() {
       const monthlyMap = new Map();
+      const accounts = ["ISA", "연금저축", "금현물계좌"];
 
       transactions.forEach(tx => {
         const month = monthKeyFromDate(tx.trade_date);
-        if (!monthlyMap.has(month)) monthlyMap.set(month, { month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [] });
+        const acc = tx.account || "기타";
+        if (!monthlyMap.has(month)) {
+          const byAcc = {};
+          accounts.forEach(a => { byAcc[a] = { buy: 0, sell: 0 }; });
+          monthlyMap.set(month, { month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [], byAccount: byAcc });
+        }
         const row = monthlyMap.get(month);
-        if ((tx.trade_type || "매수") === "매수") row.buyAmount += intWon(tx.total_amount);
-        else row.sellAmount += intWon(tx.total_amount);
+        if ((tx.trade_type || "매수") === "매수") {
+          row.buyAmount += intWon(tx.total_amount);
+          if (row.byAccount[acc]) row.byAccount[acc].buy += intWon(tx.total_amount);
+        } else {
+          row.sellAmount += intWon(tx.total_amount);
+          if (row.byAccount[acc]) row.byAccount[acc].sell += intWon(tx.total_amount);
+        }
       });
 
       monthlyInvestments.forEach(item => {
-        if (!monthlyMap.has(item.month)) monthlyMap.set(item.month, { month: item.month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [] });
+        if (!monthlyMap.has(item.month)) {
+          const byAcc = {};
+          accounts.forEach(a => { byAcc[a] = { buy: 0, sell: 0 }; });
+          monthlyMap.set(item.month, { month: item.month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [], byAccount: byAcc });
+        }
         const row = monthlyMap.get(item.month);
         row.manualAmount += intWon(item.amount);
         row.manualIds.push(item.id);
@@ -2118,23 +2135,57 @@
 
       // 데스크탑 — 월별 소계 박스 + 날짜별 소계 + 테이블 분리 렌더링
 
-      // ✅ 월별 합계: visible이 아닌 전체 transactions 기준으로 계산
+      // ✅ 월별 합계: 전체 transactions 기준 + 계좌별 분리
       const monthTotals = {};
       transactions.forEach(t => {
         const month = monthKeyFromDate(t.trade_date);
-        if (!monthTotals[month]) monthTotals[month] = { buy: 0, sell: 0 };
-        if ((t.trade_type || "매수") === "매수") monthTotals[month].buy += intWon(t.total_amount);
-        else monthTotals[month].sell += intWon(t.total_amount);
+        const acc = t.account || "기타";
+        if (!monthTotals[month]) monthTotals[month] = { buy: 0, sell: 0, byAccount: {} };
+        if (!monthTotals[month].byAccount[acc]) monthTotals[month].byAccount[acc] = { buy: 0, sell: 0 };
+        if ((t.trade_type || "매수") === "매수") {
+          monthTotals[month].buy += intWon(t.total_amount);
+          monthTotals[month].byAccount[acc].buy += intWon(t.total_amount);
+        } else {
+          monthTotals[month].sell += intWon(t.total_amount);
+          monthTotals[month].byAccount[acc].sell += intWon(t.total_amount);
+        }
       });
 
-      // ✅ 날짜별 합계: visible 기준
+      // ✅ 날짜별 합계: visible 기준 + 계좌별 분리
       const dateTotals = {};
       visible.forEach(t => {
         const date = t.trade_date || "";
-        if (!dateTotals[date]) dateTotals[date] = { buy: 0, sell: 0 };
-        if ((t.trade_type || "매수") === "매수") dateTotals[date].buy += intWon(t.total_amount);
-        else dateTotals[date].sell += intWon(t.total_amount);
+        const acc = t.account || "기타";
+        if (!dateTotals[date]) dateTotals[date] = { buy: 0, sell: 0, byAccount: {} };
+        if (!dateTotals[date].byAccount[acc]) dateTotals[date].byAccount[acc] = { buy: 0, sell: 0 };
+        if ((t.trade_type || "매수") === "매수") {
+          dateTotals[date].buy += intWon(t.total_amount);
+          dateTotals[date].byAccount[acc].buy += intWon(t.total_amount);
+        } else {
+          dateTotals[date].sell += intWon(t.total_amount);
+          dateTotals[date].byAccount[acc].sell += intWon(t.total_amount);
+        }
       });
+
+      // 계좌별 소계 각 줄로 생성 헬퍼 (거래 있는 계좌만 표시)
+      const accSummaryHTML = (byAccount) => {
+        const accounts = ["ISA", "연금저축", "금현물계좌"];
+        return accounts
+          .filter(acc => byAccount[acc] && (byAccount[acc].buy > 0 || byAccount[acc].sell > 0))
+          .map(acc => {
+            const a = byAccount[acc];
+            const net = a.buy - a.sell;
+            return `<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0;">
+              <span style="color:#2f6fed;font-weight:800;min-width:60px;">${acc}</span>
+              <span class="tx-month-divider">|</span>
+              ${a.buy > 0 ? `<span class="tx-month-buy">매수 +${a.buy.toLocaleString("ko-KR")}원</span>` : ""}
+              ${a.buy > 0 && a.sell > 0 ? `<span class="tx-month-divider">|</span>` : ""}
+              ${a.sell > 0 ? `<span class="tx-month-sell">매도 -${a.sell.toLocaleString("ko-KR")}원</span>` : ""}
+              <span class="tx-month-divider">|</span>
+              <span class="tx-month-net">순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</span>
+            </div>`;
+          }).join("");
+      };
 
       // 월별로 거래 그룹핑
       const monthGroups = [];
@@ -2180,13 +2231,25 @@
           if (date !== lastDate) {
             const dt = dateTotals[date] || { buy: 0, sell: 0 };
             const dtNet = dt.buy - dt.sell;
+            const dtAccs = ["ISA", "연금저축", "금현물계좌"]
+              .filter(acc => dt.byAccount?.[acc] && (dt.byAccount[acc].buy > 0 || dt.byAccount[acc].sell > 0))
+              .map(acc => {
+                const a = dt.byAccount[acc];
+                const n = a.buy - a.sell;
+                return `<span style="font-size:11px;margin-right:12px;">
+                  <span style="color:#2f6fed;font-weight:800;">${acc}</span>
+                  ${a.buy > 0 ? `<span class="tx-date-buy" style="margin-left:4px;">매수 +${a.buy.toLocaleString("ko-KR")}원</span>` : ""}
+                  ${a.sell > 0 ? `<span class="tx-date-sell" style="margin-left:4px;">매도 -${a.sell.toLocaleString("ko-KR")}원</span>` : ""}
+                  <span class="tx-date-net" style="margin-left:4px;">순 ${n >= 0 ? "+" : ""}${n.toLocaleString("ko-KR")}원</span>
+                </span>`;
+              }).join("");
             dateRowHTML = `
               <tr class="tx-date-row">
                 <td colspan="2"><span class="tx-date-label">📆 ${date.slice(5)}</span></td>
-                <td colspan="4"></td>
-                <td class="num tx-date-buy">${dt.buy > 0 ? "매수 +" + dt.buy.toLocaleString("ko-KR") + "원" : ""}</td>
-                <td class="num tx-date-sell">${dt.sell > 0 ? "매도 -" + dt.sell.toLocaleString("ko-KR") + "원" : ""}</td>
-                <td class="num tx-date-net">순 ${dtNet >= 0 ? "+" : ""}${dtNet.toLocaleString("ko-KR")}원</td>
+                <td colspan="7" style="font-size:11px;">
+                  <span class="tx-date-net" style="margin-right:12px;font-size:12px;">전체 순 ${dtNet >= 0 ? "+" : ""}${dtNet.toLocaleString("ko-KR")}원</span>
+                  ${dtAccs}
+                </td>
                 <td colspan="3"></td>
               </tr>`;
             lastDate = date;
@@ -2210,13 +2273,13 @@
         }).join("");
 
         return `
-          <div class="tx-month-box">
-            <span class="tx-month-label">📅 ${group.month}</span>
-            <span class="tx-month-divider">|</span>
-            <span class="tx-month-buy">매수 +${mt.buy.toLocaleString("ko-KR")}원</span>
-            ${mt.sell > 0 ? `<span class="tx-month-divider">|</span><span class="tx-month-sell">매도 -${mt.sell.toLocaleString("ko-KR")}원</span>` : ""}
-            <span class="tx-month-divider">|</span>
-            <span class="tx-month-net">순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</span>
+          <div class="tx-month-box" style="flex-direction:column;align-items:flex-start;gap:6px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">
+              <span class="tx-month-label">📅 ${group.month}</span>
+              <span class="tx-month-divider">|</span>
+              <span class="tx-month-net" style="font-size:14px;">전체 순 ${net >= 0 ? "+" : ""}${net.toLocaleString("ko-KR")}원</span>
+            </div>
+            ${accSummaryHTML(mt.byAccount)}
           </div>
           <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:8px;">
             ${theadHTML}<tbody>${rowsHTML}</tbody></table>
@@ -2469,18 +2532,24 @@
 
     function renderMonthlyTable() {
       const body = document.getElementById("monthlyBody");
-      body.innerHTML = monthlySummaryRows.map(row => `
+      body.innerHTML = monthlySummaryRows.map(row => {
+        const isa = row.byAccount?.["ISA"] || { buy: 0, sell: 0 };
+        const pension = row.byAccount?.["연금저축"] || { buy: 0, sell: 0 };
+        return `
         <tr>
           <td>${esc(row.month)}</td>
-          <td class="num">${won(row.buyAmount)}</td>
-          <td class="num">${won(row.sellAmount)}</td>
-          <td class="num ${row.netAmount >= 0 ? "profit" : "loss"}">${won(row.netAmount)}</td>
+          <td class="num ${row.netAmount >= 0 ? "profit" : "loss"}" style="font-weight:800;">${won(row.netAmount)}</td>
+          <td class="num">${isa.buy > 0 ? won(isa.buy) : '<span class="muted">-</span>'}</td>
+          <td class="num">${isa.sell > 0 ? '<span class="loss">-' + won(isa.sell) + '</span>' : '<span class="muted">-</span>'}</td>
+          <td class="num">${pension.buy > 0 ? won(pension.buy) : '<span class="muted">-</span>'}</td>
+          <td class="num">${pension.sell > 0 ? '<span class="loss">-' + won(pension.sell) + '</span>' : '<span class="muted">-</span>'}</td>
           <td>${
             row.manualIds.length
               ? row.manualIds.map(id => `<button class="danger" style="margin:2px;" onclick="deleteMonthlyInvestment(${id})">삭제</button>`).join("")
               : '<span class="muted">없음</span>'
           }</td>
-        </tr>`).join("") || `<tr><td colspan="5" class="empty-text">월별 투자기록이 없어.</td></tr>`;
+        </tr>`;
+      }).join("") || `<tr><td colspan="7" class="empty-text">월별 투자기록이 없어.</td></tr>`;
     }
 
     // ✅ 개선: 월별 차트도 매번 새로 만들지 않고 데이터만 업데이트
