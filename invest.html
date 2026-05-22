@@ -767,6 +767,7 @@
       <div class="btn-row">
         <button class="secondary" onclick="exportHoldingsCSV()">보유종목 CSV 다운로드</button>
         <button class="secondary" onclick="exportTransactionsCSV()">거래기록 CSV 다운로드</button>
+        <button class="secondary" onclick="exportMonthlyCSV()">월별 투자기록 CSV 다운로드</button>
       </div>
       <div class="notice">엑셀에서 바로 열 수 있는 CSV 파일로 저장돼. 보유종목은 계좌/종목명/수량/매입금/현재가/평가금/수익률이 포함되고, 거래기록은 날짜/계좌/종목명/구분/수량/단가/총금액/메모가 포함돼.</div>
     </div>
@@ -2984,6 +2985,29 @@
       })];
       const today = new Date().toISOString().slice(0, 10);
       downloadCSV(`보유종목_${today}.csv`, rows);
+    }
+
+    function exportMonthlyCSV() {
+      if (!monthlySummaryRows.length) return alert("월별 투자기록이 없어.");
+      const header = ["월", "ISA 매수", "ISA 매도", "ISA 순투자금", "연금저축 매수", "연금저축 매도", "연금저축 순투자금", "전체 순투자금"];
+      const rows = [header, ...monthlySummaryRows.map(row => {
+        const isa = row.byAccount?.["ISA"] || { buy: 0, sell: 0 };
+        const pension = row.byAccount?.["연금저축"] || { buy: 0, sell: 0 };
+        const isaNet = isa.buy - isa.sell;
+        const pensionNet = pension.buy - pension.sell;
+        return [
+          row.month,
+          isa.buy || 0,
+          isa.sell || 0,
+          isaNet,
+          pension.buy || 0,
+          pension.sell || 0,
+          pensionNet,
+          row.netAmount
+        ];
+      })];
+      const today = new Date().toISOString().slice(0, 10);
+      downloadCSV(`월별투자기록_${today}.csv`, rows);
     }
 
     function exportTransactionsCSV() {
