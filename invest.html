@@ -371,6 +371,39 @@
       #snapValue, #snapBuy, #snapProfit, #snapRate, #snapCount { font-size: 15px; }
     }
 
+    /* ===== 거래기록 필터 ===== */
+    .tx-filter-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #f8faff;
+      border: 1px solid #e3ebff;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .tx-filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 120px;
+    }
+    .tx-filter-item label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #667085;
+      margin-bottom: 0;
+    }
+    .tx-filter-item select {
+      padding: 7px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+    @media (max-width: 900px) {
+      .tx-filter-wrap { gap: 8px; }
+      .tx-filter-item { min-width: calc(50% - 8px); }
+    }
+
     /* ===== 날짜별 소계행 ===== */
     .tx-date-row td {
       background: #f8faff;
@@ -509,7 +542,42 @@
         <h2>거래기록</h2>
         <div class="section-meta" id="transactionsMeta">최근 7건 표시</div>
       </div>
-      <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
+      <!-- 필터 영역 -->
+      <div class="tx-filter-wrap">
+        <div class="tx-filter-item">
+          <label>계좌</label>
+          <select id="filterAccount" onchange="applyTransactionFilter()">
+            <option value="">전체</option>
+            <option value="ISA">ISA</option>
+            <option value="연금저축">연금저축</option>
+            <option value="금현물계좌">금현물계좌</option>
+          </select>
+        </div>
+        <div class="tx-filter-item">
+          <label>종목</label>
+          <select id="filterName" onchange="applyTransactionFilter()">
+            <option value="">전체</option>
+          </select>
+        </div>
+        <div class="tx-filter-item">
+          <label>구분</label>
+          <select id="filterType" onchange="applyTransactionFilter()">
+            <option value="">전체</option>
+            <option value="매수">매수</option>
+            <option value="매도">매도</option>
+          </select>
+        </div>
+        <div class="tx-filter-item">
+          <label>기간</label>
+          <select id="filterMonth" onchange="applyTransactionFilter()">
+            <option value="">전체</option>
+          </select>
+        </div>
+        <div class="tx-filter-item" style="align-self:flex-end;">
+          <button class="secondary" onclick="resetTransactionFilter()" style="padding:8px 14px;font-size:13px;">필터 초기화</button>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:8px;margin-bottom:12px;">
         <button class="secondary" onclick="toggleTransactionsView()" id="toggleTransactionsBtn">전체보기</button>
       </div>
       <!-- 데스크탑 테이블 -->
@@ -790,6 +858,7 @@
     };
 
     let showAllTransactions = false;
+    let txFilter = { account: "", name: "", type: "", month: "" };
     let isaAssetChart = null;
     let pensionAssetChart = null;
     let isaStockChart = null;
@@ -981,6 +1050,7 @@
       buildMonthlySummaryRows();
       updateTransactionNameSuggestions();
       syncChartHoldingOptions();
+      syncTransactionFilterOptions();
       setDefaultTransactionDate();
       setLastUpdateText();
       render();
@@ -2114,6 +2184,63 @@
       return remainingMap;
     }
 
+    // 필터 드롭다운 옵션 동기화
+    function syncTransactionFilterOptions() {
+      const nameSelect = document.getElementById("filterName");
+      const monthSelect = document.getElementById("filterMonth");
+      if (!nameSelect || !monthSelect) return;
+
+      // 종목 목록 (현재 필터된 계좌 기준)
+      const acc = document.getElementById("filterAccount")?.value || "";
+      const names = [...new Set(
+        transactions
+          .filter(t => !acc || t.account === acc)
+          .map(t => t.name)
+      )].sort((a, b) => a.localeCompare(b, "ko"));
+
+      const currentName = nameSelect.value;
+      nameSelect.innerHTML = `<option value="">전체</option>` +
+        names.map(n => `<option value="${esc(n)}" ${currentName === n ? "selected" : ""}>${esc(n)}</option>`).join("");
+
+      // 기간 목록
+      const months = [...new Set(transactions.map(t => monthKeyFromDate(t.trade_date)))]
+        .sort((a, b) => b.localeCompare(a));
+
+      const currentMonth = monthSelect.value;
+      monthSelect.innerHTML = `<option value="">전체</option>` +
+        months.map(m => `<option value="${m}" ${currentMonth === m ? "selected" : ""}>${m}</option>`).join("");
+    }
+
+    function applyTransactionFilter() {
+      txFilter.account = document.getElementById("filterAccount")?.value || "";
+      txFilter.name = document.getElementById("filterName")?.value || "";
+      txFilter.type = document.getElementById("filterType")?.value || "";
+      txFilter.month = document.getElementById("filterMonth")?.value || "";
+      // 계좌 바뀌면 종목 목록 다시 동기화
+      syncTransactionFilterOptions();
+      renderTransactions();
+    }
+
+    function resetTransactionFilter() {
+      txFilter = { account: "", name: "", type: "", month: "" };
+      document.getElementById("filterAccount").value = "";
+      document.getElementById("filterName").value = "";
+      document.getElementById("filterType").value = "";
+      document.getElementById("filterMonth").value = "";
+      syncTransactionFilterOptions();
+      renderTransactions();
+    }
+
+    function getFilteredTransactions() {
+      return transactions.filter(t => {
+        if (txFilter.account && t.account !== txFilter.account) return false;
+        if (txFilter.name && t.name !== txFilter.name) return false;
+        if (txFilter.type && (t.trade_type || "매수") !== txFilter.type) return false;
+        if (txFilter.month && monthKeyFromDate(t.trade_date) !== txFilter.month) return false;
+        return true;
+      });
+    }
+
     function renderTransactions() {
       const body = document.getElementById("transactionsBody");
       const mobileBody = document.getElementById("transactionsMobileBody");
@@ -2128,8 +2255,15 @@
         return;
       }
 
-      const visible = showAllTransactions ? transactions : transactions.slice(0, 7);
-      meta.textContent = showAllTransactions ? `전체 ${transactions.length}건 표시` : `최근 ${visible.length}건 표시 / 전체 ${transactions.length}건`;
+      // ✅ 필터 적용
+      const filtered = getFilteredTransactions();
+      const isFiltered = txFilter.account || txFilter.name || txFilter.type || txFilter.month;
+      const visible = (showAllTransactions || isFiltered) ? filtered : filtered.slice(0, 7);
+
+      const filterDesc = isFiltered ? ` (필터 적용: ${filtered.length}건)` : "";
+      meta.textContent = (showAllTransactions || isFiltered)
+        ? `전체 ${filtered.length}건 표시${filterDesc}`
+        : `최근 ${visible.length}건 표시 / 전체 ${transactions.length}건`;
       btn.textContent = showAllTransactions ? "최근만 보기" : "전체보기";
 
       // 잔여수량 계산
