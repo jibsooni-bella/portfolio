@@ -371,6 +371,14 @@
       #snapValue, #snapBuy, #snapProfit, #snapRate, #snapCount { font-size: 15px; }
     }
 
+    /* ===== 스냅샷 탭 ===== */
+    .snapshot-tab-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .snapshot-tab {
+      padding: 7px 18px; border-radius: 999px; font-size: 13px; font-weight: 700;
+      border: 1px solid #e3ebff; background: #f8faff; color: #667085; cursor: pointer; width: auto;
+    }
+    .snapshot-tab.active { background: #2f6fed; color: #fff; border-color: #2f6fed; }
+
     /* ===== 거래기록 필터 ===== */
     .tx-filter-wrap {
       display: flex;
@@ -815,6 +823,12 @@
         <h2>수익률 변화 그래프</h2>
         <div class="section-meta" id="snapshotMeta">-</div>
       </div>
+      <!-- 계좌 탭 -->
+      <div class="snapshot-tab-row">
+        <button class="snapshot-tab active" id="snapTab-전체" onclick="setSnapshotTab('전체')">전체</button>
+        <button class="snapshot-tab" id="snapTab-ISA" onclick="setSnapshotTab('ISA')">ISA</button>
+        <button class="snapshot-tab" id="snapTab-연금저축" onclick="setSnapshotTab('연금저축')">연금저축</button>
+      </div>
       <div class="summary" style="margin-bottom:16px;">
         <div class="item"><div class="title">오늘 평가금</div><div class="value" id="snapValue">-</div></div>
         <div class="item"><div class="title">오늘 매입금</div><div class="value" id="snapBuy">-</div></div>
@@ -865,6 +879,7 @@
     let pensionStockChart = null;
     let monthlyChart = null;
     let snapshotChart = null;
+    let currentSnapshotTab = "전체"; // 전체 / ISA / 연금저축
     let symbolHistoryChart = null;
     let editingTransactionId = null;
     let lastAmountEdited = "unit";
@@ -2901,7 +2916,15 @@
         total_value: intWon(s.total_value ?? 0),
         total_buy: intWon(s.total_buy ?? 0),
         total_profit: intWon(s.total_profit ?? 0),
-        total_rate: num(s.total_rate ?? 0)
+        total_rate: num(s.total_rate ?? 0),
+        isa_value: intWon(s.isa_value ?? 0),
+        isa_buy: intWon(s.isa_buy ?? 0),
+        isa_profit: intWon(s.isa_profit ?? 0),
+        isa_rate: num(s.isa_rate ?? 0),
+        pension_value: intWon(s.pension_value ?? 0),
+        pension_buy: intWon(s.pension_buy ?? 0),
+        pension_profit: intWon(s.pension_profit ?? 0),
+        pension_rate: num(s.pension_rate ?? 0)
       }));
     }
 
@@ -2918,7 +2941,6 @@
       }
 
       await doSaveSnapshot();
-      // ✅ 저장 후 Supabase에서 최신 스냅샷 다시 불러오기
       await loadSnapshotsFromSupabase();
     }
 
@@ -2928,17 +2950,40 @@
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
+      // 전체
       const totalBuy = holdings.reduce((s, h) => s + intWon(h.buy), 0);
       const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
+
+      // ISA
+      const isaItems = holdings.filter(h => h.account === "ISA");
+      const isaBuy = isaItems.reduce((s, h) => s + intWon(h.buy), 0);
+      const isaValue = isaItems.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const isaProfit = isaValue - isaBuy;
+      const isaRate = isaBuy > 0 ? (isaProfit / isaBuy) * 100 : 0;
+
+      // 연금저축
+      const pensionItems = holdings.filter(h => h.account === "연금저축");
+      const pensionBuy = pensionItems.reduce((s, h) => s + intWon(h.buy), 0);
+      const pensionValue = pensionItems.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const pensionProfit = pensionValue - pensionBuy;
+      const pensionRate = pensionBuy > 0 ? (pensionProfit / pensionBuy) * 100 : 0;
 
       const payload = {
         snapshot_date: todayStr,
         total_value: totalValue,
         total_buy: totalBuy,
         total_profit: totalProfit,
-        total_rate: totalRate
+        total_rate: totalRate,
+        isa_value: isaValue,
+        isa_buy: isaBuy,
+        isa_profit: isaProfit,
+        isa_rate: isaRate,
+        pension_value: pensionValue,
+        pension_buy: pensionBuy,
+        pension_profit: pensionProfit,
+        pension_rate: pensionRate
       };
 
       const existing = snapshots.find(s => s.snapshot_date === todayStr);
@@ -2980,33 +3025,58 @@
       }
     }
 
+    function setSnapshotTab(tab) {
+      currentSnapshotTab = tab;
+      // 탭 버튼 활성화
+      ["전체", "ISA", "연금저축"].forEach(t => {
+        const btn = document.getElementById(`snapTab-${t}`);
+        if (btn) btn.classList.toggle("active", t === tab);
+      });
+      // 차트 destroy 후 다시 그리기 (탭 전환 시)
+      if (snapshotChart) { snapshotChart.destroy(); snapshotChart = null; }
+      renderSnapshotChart();
+    }
+
     function renderSnapshotChart() {
       const ctx = document.getElementById("snapshotChart");
       if (!ctx) return;
 
+      // 탭에 따라 데이터 키 선택
+      const tab = currentSnapshotTab;
+      const vKey = tab === "ISA" ? "isa_value" : tab === "연금저축" ? "pension_value" : "total_value";
+      const bKey = tab === "ISA" ? "isa_buy" : tab === "연금저축" ? "pension_buy" : "total_buy";
+      const pKey = tab === "ISA" ? "isa_profit" : tab === "연금저축" ? "pension_profit" : "total_profit";
+      const rKey = tab === "ISA" ? "isa_rate" : tab === "연금저축" ? "pension_rate" : "total_rate";
+      const tabLabel = tab === "전체" ? "전체" : tab;
+
       // 요약 수치 업데이트
       const today = snapshots[snapshots.length - 1];
       if (today) {
-        document.getElementById("snapValue").textContent = won(today.total_value);
-        document.getElementById("snapBuy").textContent = won(today.total_buy);
-        document.getElementById("snapProfit").textContent = won(today.total_profit);
-        document.getElementById("snapProfit").className = "value " + (today.total_profit >= 0 ? "profit" : "loss");
-        document.getElementById("snapRate").textContent = pct(today.total_rate);
-        document.getElementById("snapRate").className = "value " + (today.total_rate >= 0 ? "profit" : "loss");
+        document.getElementById("snapValue").textContent = won(today[vKey] ?? 0);
+        document.getElementById("snapBuy").textContent = won(today[bKey] ?? 0);
+        document.getElementById("snapProfit").textContent = won(today[pKey] ?? 0);
+        document.getElementById("snapProfit").className = "value " + ((today[pKey] ?? 0) >= 0 ? "profit" : "loss");
+        document.getElementById("snapRate").textContent = pct(today[rKey] ?? 0);
+        document.getElementById("snapRate").className = "value " + ((today[rKey] ?? 0) >= 0 ? "profit" : "loss");
       }
       document.getElementById("snapCount").textContent = snapshots.length + "건";
-      document.getElementById("snapshotMeta").textContent = snapshots.length ? `${snapshots[0].snapshot_date} ~ ${snapshots[snapshots.length-1].snapshot_date}` : "-";
+      document.getElementById("snapshotMeta").textContent = snapshots.length
+        ? `${snapshots[0].snapshot_date} ~ ${snapshots[snapshots.length-1].snapshot_date} (${tabLabel})`
+        : "-";
 
       const labels = snapshots.map(s => s.snapshot_date);
-      const valueData = snapshots.map(s => s.total_value);
-      const buyData = snapshots.map(s => s.total_buy);
-      const rateData = snapshots.map(s => parseFloat(num(s.total_rate).toFixed(2)));
+      const valueData = snapshots.map(s => s[vKey] ?? 0);
+      const buyData = snapshots.map(s => s[bKey] ?? 0);
+      const rateData = snapshots.map(s => parseFloat(num(s[rKey] ?? 0).toFixed(2)));
 
       if (snapshotChart) {
         snapshotChart.data.labels = labels;
         snapshotChart.data.datasets[0].data = valueData;
+        snapshotChart.data.datasets[0].label = `${tabLabel} 평가금`;
         snapshotChart.data.datasets[1].data = buyData;
+        snapshotChart.data.datasets[1].label = `${tabLabel} 매입금`;
         snapshotChart.data.datasets[2].data = rateData;
+        snapshotChart.data.datasets[2].label = `${tabLabel} 수익률(%)`;
         snapshotChart.update();
         return;
       }
@@ -3017,7 +3087,7 @@
           labels,
           datasets: [
             {
-              label: "평가금",
+              label: `${tabLabel} 평가금`,
               data: valueData,
               borderColor: "#2f6fed",
               backgroundColor: "rgba(47,111,237,0.07)",
@@ -3028,7 +3098,7 @@
               yAxisID: "y"
             },
             {
-              label: "매입금",
+              label: `${tabLabel} 매입금`,
               data: buyData,
               borderColor: "#9ca3af",
               backgroundColor: "transparent",
@@ -3040,7 +3110,7 @@
               yAxisID: "y"
             },
             {
-              label: "수익률(%)",
+              label: `${tabLabel} 수익률(%)`,
               data: rateData,
               borderColor: "#067647",
               backgroundColor: "transparent",
