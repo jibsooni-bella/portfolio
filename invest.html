@@ -517,11 +517,11 @@
       <h2>거래기록 추가</h2>
       <div class="grid">
         <div><label for="txDate">거래일</label><input id="txDate" type="date" /></div>
-        <div><label for="txAccount">계좌</label><select id="txAccount"><option value="ISA">ISA</option><option value="연금저축">연금저축</option><option value="금현물계좌">금현물계좌</option></select></div>
+        <div><label for="txAccount">계좌</label><select id="txAccount"><option value="ISA">ISA</option><option value="연금저축">연금저축</option><option value="미국직투">미국직투</option></select></div>
         <div><label for="txTradeType">구분</label><select id="txTradeType"><option value="매수">매수</option><option value="매도">매도</option></select></div>
         <div><label for="txName">종목명</label><input id="txName" list="txNameList" placeholder="신규 종목도 입력 가능 / 기존 종목 자동완성" /><datalist id="txNameList"></datalist></div>
         <div><label for="txTicker">티커</label><input id="txTicker" placeholder="신규 종목은 입력 / 기존 종목은 비워도 됨" /></div>
-        <div><label for="txQty">수량</label><input id="txQty" type="number" step="1" placeholder="예: 2" /></div>
+        <div><label for="txQty">수량</label><input id="txQty" type="number" step="any" placeholder="예: 2" /></div>
       </div>
 
       <div class="grid-3" style="margin-top:10px;">
@@ -558,7 +558,7 @@
             <option value="">전체</option>
             <option value="ISA">ISA</option>
             <option value="연금저축">연금저축</option>
-            <option value="금현물계좌">금현물계좌</option>
+            <option value="미국직투">미국직투</option>
           </select>
         </div>
         <div class="tx-filter-item">
@@ -654,13 +654,13 @@
             <div class="item"><div class="title">손익률</div><div class="value" id="pensionRate">0%</div></div>
           </div>
         </div>
-        <div class="account-summary-row">
-          <div class="account-summary-name">금현물계좌</div>
+        <div class="account-summary-row" id="usStockSummaryRow">
+          <div class="account-summary-name">미국직투</div>
           <div class="account-summary-values">
-            <div class="item"><div class="title">평가금</div><div class="value" id="goldValue">0원</div></div>
-            <div class="item"><div class="title">총매입금</div><div class="value" id="goldBuy">0원</div></div>
-            <div class="item"><div class="title">총손익</div><div class="value" id="goldProfit">0원</div></div>
-            <div class="item"><div class="title">손익률</div><div class="value" id="goldRate">0%</div></div>
+            <div class="item"><div class="title">평가금</div><div class="value" id="usValue">0원</div></div>
+            <div class="item"><div class="title">총매입금</div><div class="value" id="usBuy">0원</div></div>
+            <div class="item"><div class="title">총손익</div><div class="value" id="usProfit">0원</div></div>
+            <div class="item"><div class="title">손익률</div><div class="value" id="usRate">0%</div></div>
           </div>
         </div>
       </div>
@@ -798,6 +798,9 @@
                 <th class="num">연금저축 매수</th>
                 <th class="num">연금저축 매도</th>
                 <th class="num">연금저축 순투자금</th>
+                <th class="num">미국직투 매수</th>
+                <th class="num">미국직투 매도</th>
+                <th class="num">미국직투 순투자금</th>
                 <th>수동추가 삭제</th>
               </tr>
             </thead>
@@ -828,6 +831,7 @@
         <button class="snapshot-tab active" id="snapTab-전체" onclick="setSnapshotTab('전체')">전체</button>
         <button class="snapshot-tab" id="snapTab-ISA" onclick="setSnapshotTab('ISA')">ISA</button>
         <button class="snapshot-tab" id="snapTab-연금저축" onclick="setSnapshotTab('연금저축')">연금저축</button>
+        <button class="snapshot-tab" id="snapTab-미국직투" onclick="setSnapshotTab('미국직투')">미국직투</button>
       </div>
       <div class="summary" style="margin-bottom:16px;">
         <div class="item"><div class="title">오늘 평가금</div><div class="value" id="snapValue">-</div></div>
@@ -885,11 +889,11 @@
     let lastAmountEdited = "unit";
     let snapshots = [];
 
-    let expandedAccounts = { "ISA": false, "연금저축": false, "금현물계좌": false };
+    let expandedAccounts = { "ISA": false, "연금저축": false, "미국직투": false };
     let holdingsSortState = {
       "ISA": { key: "value", order: "desc" },
       "연금저축": { key: "value", order: "desc" },
-      "금현물계좌": { key: "value", order: "desc" }
+      "미국직투": { key: "value", order: "desc" }
     };
 
     let selectedChartRange = "1W";
@@ -902,6 +906,21 @@
 
     function intQty(val) {
       return Math.max(0, Math.round(num(val)));
+    }
+
+    // 소수점 수량 (미국직투용)
+    function floatQty(val) {
+      const n = num(val);
+      return Math.max(0, Math.round(n * 10000) / 10000); // 소수점 4자리
+    }
+
+    // 수량 표시 (미국직투는 소수점, 나머지는 정수)
+    function displayQty(h) {
+      if (h.account === "미국직투") {
+        const q = floatQty(h.qty);
+        return q % 1 === 0 ? q.toLocaleString("ko-KR") : q.toFixed(4).replace(/\.?0+$/, "");
+      }
+      return intQty(h.qty).toLocaleString("ko-KR");
     }
 
     function intWon(val) {
@@ -959,7 +978,7 @@
 
     function classifyAsset(name = "", ticker = "", account = "") {
       const text = normalizeText(`${name} ${ticker}`);
-      if (account === "금현물계좌") return "금";
+      if (account === "미국직투") return "주식";
 
       const goldKeywords = ["금현물", "krx금현물", "gold", "골드", "금선물", "krxgold"];
       const goldFalsePositives = ["금리", "예금", "적금", "입금", "출금", "송금", "자금"];
@@ -971,7 +990,11 @@
     }
 
     function isManualGold(item) {
-      return item.account === "금현물계좌" || (item.ticker || "").toUpperCase() === "KRX-GOLD";
+      return (item.ticker || "").toUpperCase() === "KRX-GOLD";
+    }
+
+    function isUSDStock(item) {
+      return item.account === "미국직투";
     }
 
     function getCycleCount(cycle) {
@@ -991,6 +1014,35 @@
       const res = await fetch(`${WORKER_URL}?ticker=${encodeURIComponent(ticker)}`);
       const data = await res.json();
       return typeof data.price === "number" ? Math.round(data.price) : 0;
+    }
+
+    // ✅ 환율 캐시 (1시간마다 갱신)
+    let _usdKrwCache = { rate: 0, ts: 0 };
+    async function getUsdKrw() {
+      const now = Date.now();
+      if (_usdKrwCache.rate > 0 && now - _usdKrwCache.ts < 3600000) return _usdKrwCache.rate;
+      const res = await fetch(`${WORKER_URL}?ticker=KRW%3DX`);
+      const data = await res.json();
+      const rate = typeof data.price === "number" ? data.price : 0;
+      if (rate > 0) _usdKrwCache = { rate, ts: now };
+      return rate;
+    }
+
+    // ✅ 미국직투 달러 현재가 → 원화 환산
+    async function fetchUsdPriceInKrw(ticker) {
+      if (!ticker) return 0;
+      const [usdPrice, usdKrw] = await Promise.all([
+        fetchPriceFromWorker(ticker),
+        getUsdKrw()
+      ]);
+      if (!usdPrice || !usdKrw) return 0;
+      return Math.round(usdPrice * usdKrw);
+    }
+
+    // ✅ 미국직투 매입금도 달러→원화 환산해서 저장
+    async function convertUsdBuyToKrw(usdAmount) {
+      const usdKrw = await getUsdKrw();
+      return usdKrw > 0 ? Math.round(usdAmount * usdKrw) : 0;
     }
 
     async function loadMonthlyInvestmentsFromSupabase() {
@@ -1041,7 +1093,7 @@
 
       holdings = (holdingsRes.data || []).map(h => ({
         ...h,
-        qty: intQty(h.qty ?? 0),
+        qty: h.account === "미국직투" ? floatQty(h.qty ?? 0) : intQty(h.qty ?? 0),
         buy: intWon(h.buy ?? 0),
         price: intWon(h.price ?? 0),
         expectedDividendPerShare: num(h.expectedDividendPerShare ?? 0),
@@ -1240,7 +1292,10 @@
     async function upsertHoldingFromBuyTransaction(tx) {
       const addedBuy = intWon(tx.total_amount);
       let latestPrice = 0;
-      if (!isManualGold({ account: tx.account, ticker: tx.ticker }) && tx.ticker) latestPrice = await fetchPriceFromWorker(tx.ticker);
+      const isUS = tx.account === "미국직투";
+      if (!isManualGold({ account: tx.account, ticker: tx.ticker }) && tx.ticker) {
+        latestPrice = isUS ? await fetchUsdPriceInKrw(tx.ticker) : await fetchPriceFromWorker(tx.ticker);
+      }
 
       const idx = findHoldingIndexByTx(tx);
       if (idx >= 0) {
@@ -1764,7 +1819,7 @@
       if (!item) return;
 
       let updateValue = value;
-      if (["qty"].includes(field)) updateValue = intQty(value);
+      if (["qty"].includes(field)) updateValue = item.account === "미국직투" ? floatQty(value) : intQty(value);
       if (["buy", "price"].includes(field)) updateValue = intWon(value);
       if (["dividendYield", "expectedDividendPerShare", "dividendPerPayment"].includes(field)) updateValue = num(value);
 
@@ -1806,7 +1861,14 @@
       if (!item) return;
       if (isManualGold(item)) return alert("금현물은 현재가(1g)를 직접 입력해줘.");
       if (!item.ticker) return;
-      const latest = await fetchPriceFromWorker(item.ticker);
+
+      let latest = 0;
+      if (isUSDStock(item)) {
+        latest = await fetchUsdPriceInKrw(item.ticker);
+      } else {
+        latest = await fetchPriceFromWorker(item.ticker);
+      }
+
       if (!latest) return alert("가격을 불러오지 못했어.");
       item.price = intWon(latest);
       const { error } = await db.from("holdings").update({ price: intWon(latest) }).eq("id", item.id);
@@ -1833,12 +1895,19 @@
       const failed = [];
       const retryFailed = [];
 
+      // 미국직투 있으면 환율 미리 조회
+      const hasUSD = holdings.some(h => isUSDStock(h) && h.ticker);
+      if (hasUSD) await getUsdKrw();
+
       await Promise.all(
         holdings
           .filter(h => h.ticker && !isManualGold(h))
           .map(async (h) => {
             try {
-              const latest = await fetchPriceFromWorker(h.ticker);
+              const latest = isUSDStock(h)
+                ? await fetchUsdPriceInKrw(h.ticker)
+                : await fetchPriceFromWorker(h.ticker);
+
               if (latest) {
                 h.price = intWon(latest);
                 const ok = await savepriceWithRetry(h, latest);
@@ -1900,7 +1969,10 @@
     function renderAccountSummary() {
       renderOneAccountSummary(holdings.filter(h => h.account === "ISA"), "isaBuy", "isaValue", "isaProfit", "isaRate");
       renderOneAccountSummary(holdings.filter(h => h.account === "연금저축"), "pensionBuy", "pensionValue", "pensionProfit", "pensionRate");
-      renderOneAccountSummary(holdings.filter(h => h.account === "금현물계좌"), "goldBuy", "goldValue", "goldProfit", "goldRate");
+      const usHoldings = holdings.filter(h => h.account === "미국직투");
+      const usRow = document.getElementById("usStockSummaryRow");
+      if (usRow) usRow.style.display = usHoldings.length > 0 ? "" : "none";
+      renderOneAccountSummary(usHoldings, "usBuy", "usValue", "usProfit", "usRate");
     }
 
     function renderDividendSummary() {
@@ -1962,7 +2034,7 @@
 
     function getTableRows(accountItems, totalPortfolioValue, accountName) {
       return accountItems.map(h => {
-        const isGoldAccount = accountName === "금현물계좌";
+        const isGoldAccount = false; // 금현물계좌 숨김처리됨
         const avg = intQty(h.qty) > 0 ? Math.round(intWon(h.buy) / intQty(h.qty)) : 0;
         const value = intWon(intQty(h.qty) * intWon(h.price));
         const profit = value - intWon(h.buy);
@@ -1975,11 +2047,11 @@
 
         return `
           <tr>
-            <td class="account-cell"><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option></select></td>
+            <td class="account-cell"><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="미국직투" ${h.account === "미국직투" ? "selected" : ""}>미국직투</option></select></td>
             <td class="asset-cell"><select onchange="updateField(${h.id}, 'assetType', this.value)"><option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option><option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option><option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option><option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option><option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option></select></td>
             <td class="name-cell"><input value="${esc(h.name)}" title="${esc(h.name)}" onchange="updateField(${h.id}, 'name', this.value)" /></td>
             <td class="ticker-cell"><input value="${esc(h.ticker || "")}" title="${esc(h.ticker || "")}" onchange="updateField(${h.id}, 'ticker', this.value)" /></td>
-            <td class="qty-cell num"><input type="number" step="1" value="${intQty(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
+            <td class="qty-cell num"><input type="number" step="${h.account === '미국직투' ? 'any' : '1'}" value="${h.account === '미국직투' ? floatQty(h.qty) : intQty(h.qty)}" onchange="updateField(${h.id}, 'qty', this.value)" /></td>
             <td class="buy-cell num"><input type="number" step="1" value="${intWon(h.buy)}" onchange="updateField(${h.id}, 'buy', this.value)" /></td>
             <td class="avg-cell num">${avg.toLocaleString("ko-KR")}</td>
             <td class="price-cell num"><input type="number" step="1" value="${intWon(h.price)}" onchange="updateField(${h.id}, 'price', this.value)" /></td>
@@ -2000,7 +2072,7 @@
 
     function getMobileCards(accountItems, totalPortfolioValue, accountName) {
       return accountItems.map(h => {
-        const isGoldAccount = accountName === "금현물계좌";
+        const isGoldAccount = false; // 금현물계좌 숨김처리됨
         const avg = intQty(h.qty) > 0 ? Math.round(intWon(h.buy) / intQty(h.qty)) : 0;
         const value = intWon(intQty(h.qty) * intWon(h.price));
         const profit = value - intWon(h.buy);
@@ -2040,7 +2112,7 @@
 
             <div class="holding-mobile-detail">
               <div class="holding-mobile-edit-grid">
-                <div><label>계좌</label><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="금현물계좌" ${h.account === "금현물계좌" ? "selected" : ""}>금현물계좌</option></select></div>
+                <div><label>계좌</label><select onchange="updateField(${h.id}, 'account', this.value)"><option value="ISA" ${h.account === "ISA" ? "selected" : ""}>ISA</option><option value="연금저축" ${h.account === "연금저축" ? "selected" : ""}>연금저축</option><option value="미국직투" ${h.account === "미국직투" ? "selected" : ""}>미국직투</option></select></div>
                 <div><label>자산군</label><select onchange="updateField(${h.id}, 'assetType', this.value)"><option value="주식" ${h.assetType === "주식" ? "selected" : ""}>주식</option><option value="채권" ${h.assetType === "채권" ? "selected" : ""}>채권</option><option value="금" ${h.assetType === "금" ? "selected" : ""}>금</option><option value="달러" ${h.assetType === "달러" ? "selected" : ""}>달러</option><option value="리츠" ${h.assetType === "리츠" ? "selected" : ""}>리츠</option></select></div>
                 <div><label>종목명</label><input value="${esc(h.name)}" onchange="updateField(${h.id}, 'name', this.value)" /></div>
                 <div><label>티커</label><input value="${esc(h.ticker || "")}" onchange="updateField(${h.id}, 'ticker', this.value)" /></div>
@@ -2079,7 +2151,7 @@
       const rawSections = [
         { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
         { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
-        { title: "금현물계좌", items: holdings.filter(h => h.account === "금현물계좌") }
+        { title: "미국직투", items: holdings.filter(h => h.account === "미국직투") }
       ];
 
       container.innerHTML = rawSections.map(section => {
@@ -2320,7 +2392,7 @@
 
       // 계좌별 소계 각 줄로 생성 헬퍼 (거래 있는 계좌만 표시)
       const accSummaryHTML = (byAccount) => {
-        const accounts = ["ISA", "연금저축", "금현물계좌"];
+        const accounts = ["ISA", "연금저축", "미국직투"];
         return accounts
           .filter(acc => byAccount[acc] && (byAccount[acc].buy > 0 || byAccount[acc].sell > 0))
           .map(acc => {
@@ -2686,6 +2758,7 @@
       body.innerHTML = monthlySummaryRows.map(row => {
         const isa = row.byAccount?.["ISA"] || { buy: 0, sell: 0 };
         const pension = row.byAccount?.["연금저축"] || { buy: 0, sell: 0 };
+        const us = row.byAccount?.["미국직투"] || { buy: 0, sell: 0 };
         return `
         <tr>
           <td>${esc(row.month)}</td>
@@ -2695,13 +2768,16 @@
           <td class="num">${pension.buy > 0 ? won(pension.buy) : '<span class="muted">-</span>'}</td>
           <td class="num">${pension.sell > 0 ? '<span class="loss">-' + won(pension.sell) + '</span>' : '<span class="muted">-</span>'}</td>
           <td class="num ${(pension.buy - pension.sell) >= 0 ? "profit" : "loss"}" style="font-weight:800;">${(pension.buy > 0 || pension.sell > 0) ? won(pension.buy - pension.sell) : '<span class="muted">-</span>'}</td>
+          <td class="num">${us.buy > 0 ? won(us.buy) : '<span class="muted">-</span>'}</td>
+          <td class="num">${us.sell > 0 ? '<span class="loss">-' + won(us.sell) + '</span>' : '<span class="muted">-</span>'}</td>
+          <td class="num ${(us.buy - us.sell) >= 0 ? "profit" : "loss"}" style="font-weight:800;">${(us.buy > 0 || us.sell > 0) ? won(us.buy - us.sell) : '<span class="muted">-</span>'}</td>
           <td>${
             row.manualIds.length
               ? row.manualIds.map(id => `<button class="danger" style="margin:2px;" onclick="deleteMonthlyInvestment(${id})">삭제</button>`).join("")
               : '<span class="muted">없음</span>'
           }</td>
         </tr>`;
-      }).join("") || `<tr><td colspan="8" class="empty-text">월별 투자기록이 없어.</td></tr>`;
+      }).join("") || `<tr><td colspan="11" class="empty-text">월별 투자기록이 없어.</td></tr>`;
     }
 
     // ✅ 개선: 월별 차트도 매번 새로 만들지 않고 데이터만 업데이트
@@ -3028,7 +3104,7 @@
     function setSnapshotTab(tab) {
       currentSnapshotTab = tab;
       // 탭 버튼 활성화
-      ["전체", "ISA", "연금저축"].forEach(t => {
+      ["전체", "ISA", "연금저축", "미국직투"].forEach(t => {
         const btn = document.getElementById(`snapTab-${t}`);
         if (btn) btn.classList.toggle("active", t === tab);
       });
@@ -3193,20 +3269,19 @@
 
     function exportMonthlyCSV() {
       if (!monthlySummaryRows.length) return alert("월별 투자기록이 없어.");
-      const header = ["월", "ISA 매수", "ISA 매도", "ISA 순투자금", "연금저축 매수", "연금저축 매도", "연금저축 순투자금", "전체 순투자금"];
+      const header = ["월", "ISA 매수", "ISA 매도", "ISA 순투자금", "연금저축 매수", "연금저축 매도", "연금저축 순투자금", "미국직투 매수", "미국직투 매도", "미국직투 순투자금", "전체 순투자금"];
       const rows = [header, ...monthlySummaryRows.map(row => {
         const isa = row.byAccount?.["ISA"] || { buy: 0, sell: 0 };
         const pension = row.byAccount?.["연금저축"] || { buy: 0, sell: 0 };
+        const us = row.byAccount?.["미국직투"] || { buy: 0, sell: 0 };
         const isaNet = isa.buy - isa.sell;
         const pensionNet = pension.buy - pension.sell;
+        const usNet = us.buy - us.sell;
         return [
           row.month,
-          isa.buy || 0,
-          isa.sell || 0,
-          isaNet,
-          pension.buy || 0,
-          pension.sell || 0,
-          pensionNet,
+          isa.buy || 0, isa.sell || 0, isaNet,
+          pension.buy || 0, pension.sell || 0, pensionNet,
+          us.buy || 0, us.sell || 0, usNet,
           row.netAmount
         ];
       })];
