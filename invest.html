@@ -1248,7 +1248,7 @@
     }
 
     function getHoldingMetric(h, key, totalPortfolioValue = 0) {
-      const qty = intQty(h.qty);
+      const qty = num(h.qty);
       const buy = intWon(h.buy);
       const price = intWon(h.price);
       const value = intWon(qty * price);
@@ -1985,7 +1985,7 @@
 
     function renderSummary() {
       const totalBuy = holdings.reduce((s, h) => s + intWon(h.buy), 0);
-      const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalValue = holdings.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
       document.getElementById("sumValue").textContent = won(totalValue);
@@ -1999,7 +1999,7 @@
 
     function renderOneAccountSummary(items, buyId, valueId, profitId, rateId) {
       const totalBuy = items.reduce((s, h) => s + intWon(h.buy), 0);
-      const totalValue = items.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalValue = items.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
 
@@ -2024,7 +2024,7 @@
       // ✅ 단순화: 연간 예상 주당배당(expectedDividendPerShare) 직접 입력값만 사용
       const dividendItems = holdings.filter(h => h.account !== "금현물계좌" && num(h.expectedDividendPerShare) > 0);
       const yearly = dividendItems.reduce((s, h) => s + intQty(h.qty) * num(h.expectedDividendPerShare), 0);
-      const base = dividendItems.reduce((s, h) => s + intQty(h.qty) * intWon(h.price), 0);
+      const base = dividendItems.reduce((s, h) => s + num(h.qty) * intWon(h.price), 0);
       document.getElementById("dividendYear").textContent = won(yearly);
       document.getElementById("dividendMonth").textContent = won(yearly / 12);
       document.getElementById("dividendCount").textContent = dividendItems.length + "개";
@@ -2081,12 +2081,12 @@
       return accountItems.map(h => {
         const isGoldAccount = false; // 금현물계좌 숨김처리됨
         const avg = intQty(h.qty) > 0 ? Math.round(intWon(h.buy) / intQty(h.qty)) : 0;
-        const value = intWon(intQty(h.qty) * intWon(h.price));
+        const value = intWon(num(h.qty) * intWon(h.price));
         const profit = value - intWon(h.buy);
         const rate = intWon(h.buy) > 0 ? (profit / intWon(h.buy)) * 100 : 0;
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
         const expectedDividendPerShare = num(h.expectedDividendPerShare);
-        const yearlyDividend = intQty(h.qty) * expectedDividendPerShare;
+        const yearlyDividend = num(h.qty) * expectedDividendPerShare;
         const derivedDividendYield = (expectedDividendPerShare > 0 && intWon(h.price) > 0) ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0;
         const updateButtonLabel = isManualGold(h) ? "수동" : "갱신";
 
@@ -2119,14 +2119,14 @@
       return accountItems.map(h => {
         const isGoldAccount = false; // 금현물계좌 숨김처리됨
         const avg = intQty(h.qty) > 0 ? Math.round(intWon(h.buy) / intQty(h.qty)) : 0;
-        const value = intWon(intQty(h.qty) * intWon(h.price));
+        const value = intWon(num(h.qty) * intWon(h.price));
         const profit = value - intWon(h.buy);
         const rate = intWon(h.buy) > 0 ? (profit / intWon(h.buy)) * 100 : 0;
         const weight = totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0;
         const cycle = h.dividendCycle || "직접입력";
         const dividendPerPayment = num(h.dividendPerPayment);
         const expectedDividendPerShare = num(h.expectedDividendPerShare);
-        const yearlyDividend = intQty(h.qty) * expectedDividendPerShare;
+        const yearlyDividend = num(h.qty) * expectedDividendPerShare;
         const derivedDividendYield = (expectedDividendPerShare > 0 && intWon(h.price) > 0) ? (expectedDividendPerShare / intWon(h.price)) * 100 : 0;
         const updateButtonLabel = isManualGold(h) ? "수동" : "가격갱신";
 
@@ -2192,7 +2192,7 @@
 
     function renderHoldingsSections() {
       const container = document.getElementById("holdingsSections");
-      const totalPortfolioValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalPortfolioValue = holdings.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const rawSections = [
         { title: "ISA", items: holdings.filter(h => h.account === "ISA") },
         { title: "연금저축", items: holdings.filter(h => h.account === "연금저축") },
@@ -2694,7 +2694,7 @@
     function buildAssetTotals(items) {
       const totals = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
       items.forEach(h => {
-        const value = intWon(intQty(h.qty) * intWon(h.price));
+        const value = intWon(num(h.qty) * intWon(h.price));
         totals[h.assetType] = (totals[h.assetType] || 0) + value;
       });
       return totals;
@@ -2754,7 +2754,7 @@
       // ISA 주식 종목별
       const isaStockItems = isaItems.filter(h => h.assetType === "주식");
       const isaStockLabels = isaStockItems.map(h => h.name);
-      const isaStockData = isaStockItems.map(h => intWon(intQty(h.qty) * intWon(h.price)));
+      const isaStockData = isaStockItems.map(h => intWon(num(h.qty) * intWon(h.price)));
       const isaStockColors = ["#185fa5","#5dcaa5","#85b7eb","#ef9f27","#d4537e","#a78bfa","#0c447c","#3db88a","#fac775","#ed93b1"];
       isaStockChart = updatePieChart("isaStockChart", isaStockChart, isaStockLabels, isaStockData, isaStockColors.slice(0, isaStockLabels.length));
 
@@ -2769,13 +2769,13 @@
       // 연금저축 주식 종목별
       const pensionStockItems = pensionItems.filter(h => h.assetType === "주식");
       const pensionStockLabels = pensionStockItems.map(h => h.name);
-      const pensionStockData = pensionStockItems.map(h => intWon(intQty(h.qty) * intWon(h.price)));
+      const pensionStockData = pensionStockItems.map(h => intWon(num(h.qty) * intWon(h.price)));
       pensionStockChart = updatePieChart("pensionStockChart", pensionStockChart, pensionStockLabels, pensionStockData, isaStockColors.slice(0, pensionStockLabels.length));
     }
 
     function renderRebalanceTitles() {
-      const isaTotal = holdings.filter(h => h.account === "ISA").reduce((sum, h) => sum + intWon(intQty(h.qty) * intWon(h.price)), 0);
-      const pensionTotal = holdings.filter(h => h.account === "연금저축").reduce((sum, h) => sum + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const isaTotal = holdings.filter(h => h.account === "ISA").reduce((sum, h) => sum + intWon(num(h.qty) * intWon(h.price)), 0);
+      const pensionTotal = holdings.filter(h => h.account === "연금저축").reduce((sum, h) => sum + intWon(num(h.qty) * intWon(h.price)), 0);
       document.getElementById("isaRebalanceTitle").textContent = `ISA 리밸런싱 : 총금액 ${won(isaTotal)}`;
       document.getElementById("pensionRebalanceTitle").textContent = `연금저축 리밸런싱 : 총금액 ${won(pensionTotal)}`;
     }
@@ -2833,9 +2833,9 @@
 
     function renderRebalanceForAccount(account, resultId) {
       const items = holdings.filter(h => h.account === account);
-      const totalValue = items.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalValue = items.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const current = { 주식: 0, 채권: 0, 금: 0, 달러: 0, 리츠: 0 };
-      items.forEach(h => { current[h.assetType] = (current[h.assetType] || 0) + intWon(intQty(h.qty) * intWon(h.price)); });
+      items.forEach(h => { current[h.assetType] = (current[h.assetType] || 0) + intWon(num(h.qty) * intWon(h.price)); });
       const targets = accountTargets[account] || { stock: 60, bond: 20, gold: 10, dollar: 5, reit: 5 };
       const targetMap = { 주식: targets.stock, 채권: targets.bond, 금: targets.gold, 달러: targets.dollar, 리츠: targets.reit };
       if (totalValue <= 0) { document.getElementById(resultId).innerHTML = `<div class="empty-text">보유 종목이 없어.</div>`; return; }
@@ -3160,21 +3160,21 @@
 
       // 전체
       const totalBuy = holdings.reduce((s, h) => s + intWon(h.buy), 0);
-      const totalValue = holdings.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const totalValue = holdings.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const totalProfit = totalValue - totalBuy;
       const totalRate = totalBuy > 0 ? (totalProfit / totalBuy) * 100 : 0;
 
       // ISA
       const isaItems = holdings.filter(h => h.account === "ISA");
       const isaBuy = isaItems.reduce((s, h) => s + intWon(h.buy), 0);
-      const isaValue = isaItems.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const isaValue = isaItems.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const isaProfit = isaValue - isaBuy;
       const isaRate = isaBuy > 0 ? (isaProfit / isaBuy) * 100 : 0;
 
       // 연금저축
       const pensionItems = holdings.filter(h => h.account === "연금저축");
       const pensionBuy = pensionItems.reduce((s, h) => s + intWon(h.buy), 0);
-      const pensionValue = pensionItems.reduce((s, h) => s + intWon(intQty(h.qty) * intWon(h.price)), 0);
+      const pensionValue = pensionItems.reduce((s, h) => s + intWon(num(h.qty) * intWon(h.price)), 0);
       const pensionProfit = pensionValue - pensionBuy;
       const pensionRate = pensionBuy > 0 ? (pensionProfit / pensionBuy) * 100 : 0;
 
