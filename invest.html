@@ -666,7 +666,52 @@
       </div>
     </div>
 
-    <div class="card" id="sec-holdings"><h2>보유 종목</h2><div id="holdingsSections"></div></div>
+    <div class="card" id="sec-holdings">
+      <div class="section-head">
+        <h2>보유 종목</h2>
+        <button class="secondary" style="width:auto;padding:8px 16px;font-size:13px;" onclick="toggleAddHoldingForm()">➕ 보유종목 직접 추가</button>
+      </div>
+
+      <!-- 보유종목 직접 추가 폼 -->
+      <div id="addHoldingForm" style="display:none;background:#f8faff;border:1px solid #e3ebff;border-radius:14px;padding:16px;margin-bottom:16px;">
+        <h2 style="margin:0 0 14px;font-size:16px;">보유종목 직접 추가</h2>
+        <div class="grid" style="margin-bottom:10px;">
+          <div><label>계좌</label>
+            <select id="addAccount">
+              <option value="ISA">ISA</option>
+              <option value="연금저축">연금저축</option>
+              <option value="미국직투">미국직투</option>
+            </select>
+          </div>
+          <div><label>자산군</label>
+            <select id="addAssetType">
+              <option value="주식">주식</option>
+              <option value="채권">채권</option>
+              <option value="금">금</option>
+              <option value="달러">달러</option>
+              <option value="리츠">리츠</option>
+            </select>
+          </div>
+          <div><label>종목명</label><input id="addName" placeholder="예: NVIDIA" /></div>
+          <div><label>티커</label><input id="addTicker" placeholder="예: NVDA" /></div>
+          <div><label>수량</label><input id="addQty" type="number" step="any" placeholder="예: 1.5" /></div>
+          <div><label>총 매입금 (원화)</label><input id="addBuy" type="number" step="1" placeholder="예: 500000" /></div>
+        </div>
+        <div class="grid-3" style="margin-bottom:10px;">
+          <div><label>현재가 (원화, 비워두면 자동조회)</label><input id="addPrice" type="number" step="1" placeholder="비워두면 티커로 자동조회" /></div>
+          <div><label>연간 예상 주당배당 (선택)</label><input id="addDividend" type="number" step="any" placeholder="예: 935" /></div>
+          <div><label>&nbsp;</label>
+            <button onclick="addHoldingDirectly()" id="addHoldingBtn">보유종목 추가</button>
+          </div>
+        </div>
+        <div class="notice" id="addHoldingNotice">
+          미국직투는 매입금을 <b>원화</b>로 입력해줘. (달러 × 환율)<br>
+          현재가를 비워두면 티커 기준으로 자동 조회해줘. 미국주식은 달러→원화 자동 환산돼.
+        </div>
+      </div>
+
+      <div id="holdingsSections"></div>
+    </div>
 
     <div class="card" id="sec-chart">
       <div class="section-head">
@@ -2551,6 +2596,93 @@
             </div>`);
         });
         mobileBody.innerHTML = mobileRows.join("");
+      }
+    }
+
+    function toggleAddHoldingForm() {
+      const form = document.getElementById("addHoldingForm");
+      form.style.display = form.style.display === "none" ? "block" : "none";
+    }
+
+    async function addHoldingDirectly() {
+      const account = document.getElementById("addAccount").value;
+      const assetType = document.getElementById("addAssetType").value;
+      const name = document.getElementById("addName").value.trim();
+      const ticker = document.getElementById("addTicker").value.trim().toUpperCase();
+      const qtyRaw = document.getElementById("addQty").value;
+      const buyRaw = document.getElementById("addBuy").value;
+      const priceRaw = document.getElementById("addPrice").value;
+      const dividendRaw = document.getElementById("addDividend").value;
+
+      if (!name) return alert("종목명을 입력해줘.");
+      const qty = account === "미국직투" ? floatQty(qtyRaw) : intQty(qtyRaw);
+      if (qty <= 0) return alert("수량을 0보다 크게 입력해줘.");
+      const buy = intWon(buyRaw);
+      if (buy <= 0) return alert("총 매입금(원화)을 입력해줘.");
+
+      const btn = document.getElementById("addHoldingBtn");
+      btn.disabled = true;
+      btn.textContent = "추가 중...";
+
+      try {
+        // 현재가 자동 조회
+        let price = intWon(priceRaw);
+        if (!price && ticker) {
+          const notice = document.getElementById("addHoldingNotice");
+          notice.textContent = "현재가 자동 조회 중...";
+          price = account === "미국직투"
+            ? await fetchUsdPriceInKrw(ticker)
+            : await fetchPriceFromWorker(ticker);
+        }
+
+        const newHolding = {
+          account,
+          assetType,
+          name,
+          ticker: ticker || "",
+          qty,
+          buy,
+          price: price || 0,
+          expectedDividendPerShare: num(dividendRaw),
+          dividendYield: 0,
+          dividendCycle: "직접입력",
+          dividendPerPayment: 0
+        };
+
+        const { data, error } = await db.from("holdings").insert([newHolding]).select();
+        if (error) return alert("보유종목 추가 실패: " + error.message);
+
+        if (data?.length) {
+          holdings.push({
+            ...data[0],
+            qty: account === "미국직투" ? floatQty(data[0].qty ?? 0) : intQty(data[0].qty ?? 0),
+            buy: intWon(data[0].buy ?? 0),
+            price: intWon(data[0].price ?? 0),
+            expectedDividendPerShare: num(data[0].expectedDividendPerShare ?? 0),
+            dividendYield: num(data[0].dividendYield ?? 0),
+            dividendCycle: data[0].dividendCycle ?? "직접입력",
+            dividendPerPayment: num(data[0].dividendPerPayment ?? 0),
+            assetType: data[0].assetType || classifyAsset(data[0].name, data[0].ticker, data[0].account)
+          });
+        }
+
+        // 폼 초기화
+        ["addName","addTicker","addQty","addBuy","addPrice","addDividend"].forEach(id => {
+          document.getElementById(id).value = "";
+        });
+        document.getElementById("addHoldingNotice").textContent =
+          "미국직투는 매입금을 원화로 입력해줘. (달러 × 환율)\n현재가를 비워두면 티커 기준으로 자동 조회해줘. 미국주식은 달러→원화 자동 환산돼.";
+
+        alert(`✅ ${name} 보유종목 추가 완료!`);
+        updateTransactionNameSuggestions();
+        syncChartHoldingOptions();
+        render();
+
+      } catch(e) {
+        alert("오류 발생: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "보유종목 추가";
       }
     }
 
