@@ -959,11 +959,13 @@
       return Math.max(0, Math.round(n * 10000) / 10000); // 소수점 4자리
     }
 
-    // 수량 표시 (미국직투는 소수점, 나머지는 정수)
+    // 수량 표시 (미국직투는 소수점 6자리, 나머지는 정수)
     function displayQty(h) {
       if (h.account === "미국직투") {
-        const q = floatQty(h.qty);
-        return q % 1 === 0 ? q.toLocaleString("ko-KR") : q.toFixed(4).replace(/\.?0+$/, "");
+        const q = num(h.qty);
+        if (q === 0) return "0";
+        // 소수점 최대 6자리, 불필요한 0 제거
+        return parseFloat(q.toFixed(6)).toLocaleString("ko-KR", { maximumFractionDigits: 6 });
       }
       return intQty(h.qty).toLocaleString("ko-KR");
     }
@@ -1150,7 +1152,7 @@
 
       transactions = (transactionsRes.data || []).map(t => ({
         ...t,
-        quantity: intQty(t.quantity ?? 0),
+        quantity: t.account === "미국직투" ? floatQty(t.quantity ?? 0) : intQty(t.quantity ?? 0),
         unit_price: intWon(t.unit_price ?? 0),
         total_amount: intWon(t.total_amount ?? 0)
       }));
@@ -1288,7 +1290,9 @@
     }
 
     function syncTransactionAmountFields(source) {
-      const qty = intQty(document.getElementById("txQty").value);
+      const account = document.getElementById("txAccount").value;
+      const isUS = account === "미국직투";
+      const qty = isUS ? floatQty(document.getElementById("txQty").value) : intQty(document.getElementById("txQty").value);
       const unitInput = document.getElementById("txUnitPrice");
       const totalInput = document.getElementById("txTotalAmount");
       const unit = intWon(unitInput.value);
@@ -1309,7 +1313,9 @@
     }
 
     function resolveTransactionAmounts() {
-      const qty = intQty(document.getElementById("txQty").value);
+      const account = document.getElementById("txAccount").value;
+      const isUS = account === "미국직투";
+      const qty = isUS ? floatQty(document.getElementById("txQty").value) : intQty(document.getElementById("txQty").value);
       const unitInput = intWon(document.getElementById("txUnitPrice").value);
       const totalInput = intWon(document.getElementById("txTotalAmount").value);
 
@@ -1345,7 +1351,7 @@
       const idx = findHoldingIndexByTx(tx);
       if (idx >= 0) {
         const item = holdings[idx];
-        item.qty = intQty(item.qty + tx.quantity);
+        item.qty = tx.account === "미국직투" ? floatQty(num(item.qty) + num(tx.quantity)) : intQty(item.qty + tx.quantity);
         item.buy = intWon(item.buy + addedBuy);
         item.assetType = item.assetType || classifyAsset(item.name, item.ticker, item.account);
         if (!isManualGold(item) && latestPrice > 0) item.price = intWon(latestPrice);
@@ -1355,7 +1361,7 @@
           assetType: item.assetType,
           name: item.name,
           ticker: item.ticker,
-          qty: intQty(item.qty),
+          qty: item.account === "미국직투" ? num(item.qty) : intQty(item.qty),
           buy: intWon(item.buy),
           price: intWon(item.price),
           expectedDividendPerShare: num(item.expectedDividendPerShare),
@@ -1649,7 +1655,7 @@
         name,
         ticker,
         trade_type,
-        quantity: intQty(quantity),
+        quantity: account === "미국직투" ? floatQty(quantity) : intQty(quantity),
         unit_price: intWon(unit_price),
         total_amount: intWon(total_amount),
         memo
@@ -1689,7 +1695,7 @@
       if (data?.length) {
         const inserted = {
           ...data[0],
-          quantity: intQty(data[0].quantity ?? 0),
+          quantity: data[0].account === "미국직투" ? floatQty(data[0].quantity ?? 0) : intQty(data[0].quantity ?? 0),
           unit_price: intWon(data[0].unit_price ?? 0),
           total_amount: intWon(data[0].total_amount ?? 0)
         };
@@ -2295,7 +2301,7 @@
         const key = `${t.account}||${normalizeText(t.name)}||${normalizeText(t.ticker || "")}`;
         if (!txTotals[key]) txTotals[key] = 0;
         const isBuy = (t.trade_type || "매수") === "매수";
-        txTotals[key] += isBuy ? intQty(t.quantity) : -intQty(t.quantity);
+        txTotals[key] += isBuy ? num(t.quantity) : -num(t.quantity);
       });
 
       // 거래 이전 초기 보유수량 = 현재보유 - 거래합산
@@ -2308,7 +2314,7 @@
         const key = `${t.account}||${normalizeText(t.name)}||${normalizeText(t.ticker || "")}`;
         if (!(key in qtyAccum)) qtyAccum[key] = 0;
         const isBuy = (t.trade_type || "매수") === "매수";
-        qtyAccum[key] += isBuy ? intQty(t.quantity) : -intQty(t.quantity);
+        qtyAccum[key] += isBuy ? num(t.quantity) : -num(t.quantity);
         qtyAccum[key] = Math.max(0, qtyAccum[key]);
         remainingMap[t.id] = qtyAccum[key];
       });
@@ -2530,7 +2536,7 @@
               <td>${esc(t.name || "")}</td>
               <td>${esc(t.ticker || "")}</td>
               <td>${esc(t.trade_type || "매수")}</td>
-              <td class="num">${isBuy ? "+" : "-"}${intQty(t.quantity).toLocaleString("ko-KR")}</td>
+              <td class="num">${isBuy ? "+" : "-"}${t.account === "미국직투" ? parseFloat(num(t.quantity).toFixed(6)) : intQty(t.quantity)}</td>
               <td class="num" style="color:#667085;font-weight:700;">${remainingText}</td>
               <td class="num">${won(t.unit_price)}</td>
               <td class="num">${won(t.total_amount)}</td>
