@@ -826,8 +826,15 @@
     <div class="grid-2" id="sec-monthly">
       <div class="card">
         <h2>월별 투자 기록</h2>
-        <div class="monthly-input-wrap">
+        <div class="monthly-input-wrap" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
           <div><label for="investMonth">월</label><input id="investMonth" type="month" /></div>
+          <div><label for="investAccount">계좌</label>
+            <select id="investAccount">
+              <option value="ISA">ISA</option>
+              <option value="연금저축">연금저축</option>
+              <option value="미국직투">미국직투</option>
+            </select>
+          </div>
           <div><label for="investAmount">수동 추가 매수금액</label><input id="investAmount" type="number" step="1" placeholder="예: 500000" /></div>
           <div><label>&nbsp;</label><button onclick="addMonthlyInvestment()">수동 기록 추가</button></div>
         </div>
@@ -1172,7 +1179,7 @@
 
     function buildMonthlySummaryRows() {
       const monthlyMap = new Map();
-      const accounts = ["ISA", "연금저축", "금현물계좌"];
+      const accounts = ["ISA", "연금저축", "미국직투"];
 
       transactions.forEach(tx => {
         const month = monthKeyFromDate(tx.trade_date);
@@ -1183,12 +1190,14 @@
           monthlyMap.set(month, { month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [], byAccount: byAcc });
         }
         const row = monthlyMap.get(month);
+        // ✅ byAccount에 없는 계좌도 동적으로 추가
+        if (!row.byAccount[acc]) row.byAccount[acc] = { buy: 0, sell: 0 };
         if ((tx.trade_type || "매수") === "매수") {
           row.buyAmount += intWon(tx.total_amount);
-          if (row.byAccount[acc]) row.byAccount[acc].buy += intWon(tx.total_amount);
+          row.byAccount[acc].buy += intWon(tx.total_amount);
         } else {
           row.sellAmount += intWon(tx.total_amount);
-          if (row.byAccount[acc]) row.byAccount[acc].sell += intWon(tx.total_amount);
+          row.byAccount[acc].sell += intWon(tx.total_amount);
         }
       });
 
@@ -1199,6 +1208,10 @@
           monthlyMap.set(item.month, { month: item.month, buyAmount: 0, sellAmount: 0, manualAmount: 0, manualIds: [], byAccount: byAcc });
         }
         const row = monthlyMap.get(item.month);
+        const acc = item.account || "ISA";
+        // ✅ 수동추가금액도 계좌별로 반영
+        if (!row.byAccount[acc]) row.byAccount[acc] = { buy: 0, sell: 0 };
+        row.byAccount[acc].buy += intWon(item.amount);
         row.manualAmount += intWon(item.amount);
         row.manualIds.push(item.id);
       });
@@ -1597,9 +1610,10 @@
       return true;
     }
 
-    async function addOrUpdateMonthlyInvestment(month, deltaAmount) {
+    async function addOrUpdateMonthlyInvestment(month, deltaAmount, account = "ISA") {
       if (!month) return;
-      const existing = monthlyInvestments.find(item => item.month === month);
+      // ✅ 계좌별로 별도 행 관리
+      const existing = monthlyInvestments.find(item => item.month === month && (item.account || "ISA") === account);
 
       if (existing) {
         const nextAmount = intWon(num(existing.amount) + num(deltaAmount));
@@ -1607,11 +1621,11 @@
           const { error } = await db.from("monthly_investments").delete().eq("id", existing.id);
           if (error) throw error;
         } else {
-          const { error } = await db.from("monthly_investments").update({ amount: nextAmount }).eq("id", existing.id);
+          const { error } = await db.from("monthly_investments").update({ amount: nextAmount, account }).eq("id", existing.id);
           if (error) throw error;
         }
       } else if (num(deltaAmount) > 0) {
-        const { error } = await db.from("monthly_investments").insert([{ month, amount: intWon(deltaAmount) }]);
+        const { error } = await db.from("monthly_investments").insert([{ month, amount: intWon(deltaAmount), account }]);
         if (error) throw error;
       }
       await loadMonthlyInvestmentsFromSupabase();
@@ -2868,10 +2882,11 @@
 
     async function addMonthlyInvestment() {
       const month = document.getElementById("investMonth").value;
+      const account = document.getElementById("investAccount").value || "ISA";
       const amount = intWon(document.getElementById("investAmount").value);
       if (!month || !amount) return alert("월과 수동 추가 금액을 입력해줘.");
       try {
-        await addOrUpdateMonthlyInvestment(month, amount);
+        await addOrUpdateMonthlyInvestment(month, amount, account);
         document.getElementById("investMonth").value = "";
         document.getElementById("investAmount").value = "";
         buildMonthlySummaryRows();
